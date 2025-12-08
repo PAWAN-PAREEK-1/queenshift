@@ -7,12 +7,12 @@ const userSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  avatar: {
+  avatar_index: {
     type: Number,
     default:0
   },
-  
-  frame: {
+
+  frame_index: {
     type: Number,
     default:0
   }

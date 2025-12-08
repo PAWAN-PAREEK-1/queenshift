@@ -9,16 +9,16 @@ const router = express.Router();
 // ----------------------
 router.post("/signup", async (req, res) => {
   try {
-    const { username, avatar, frame } = req.body;
+    const { username, avatar_index, frame_index } = req.body;
 
     if (!username) {
-      return res.status(400).json({ message: "username and avatar are required" });
+      return res.status(400).json({ message: "username and avatar_index are required" });
     }
 
     const isExist = await User.findOne({username})
     if(isExist) return res.status(400).json({ message: "Username already exists" });
 
-    const user = new User({ username, frame, avatar });
+    const user = new User({ username, frame_index, avatar_index });
     await user.save();
 
     res.json({ message: "Signup successful", user });
@@ -32,10 +32,10 @@ router.post("/signup", async (req, res) => {
 // ----------------------
 router.post("/update", async (req, res) => {
   try {
-    const { username, avatar, frame } = req.body;
+    const { username, avatar_index, frame_index } = req.body;
 
     if (!username) {
-      return res.status(400).json({ message: "username and avatar required" });
+      return res.status(400).json({ message: "username and avatar_index required" });
     }
 
   const user = await User.findOne({username:username})
@@ -44,8 +44,8 @@ router.post("/update", async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if(avatar) user.avatar = avatar
-    if(frame)  user.frame = frame
+    if(avatar_index) user.avatar_index = avatar_index
+    if(frame_index)  user.frame_index = frame_index
 
     await user.save({new:true})
 
@@ -57,7 +57,7 @@ router.post("/update", async (req, res) => {
 
 router.get("/time", async (req, res)=>{
   const date = Date.now()
-  return res.status(200).json({ date});
+  return res.status(200).json({data: {date}});
 })
 
 router.get("/user", async (req, res)=>{
