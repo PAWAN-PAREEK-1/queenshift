@@ -32,28 +32,33 @@ router.post("/signup", async (req, res) => {
 // ----------------------
 router.post("/update", async (req, res) => {
   try {
-    const { username, avatar_index, frame_index } = req.body;
+    const { userId, username, avatar_index, frame_index } = req.body;
 
-    if (!username) {
-      return res.status(400).json({ message: "username and avatar_index required" });
+    if (!userId) {
+      return res.status(400).json({ message: "userId is required" });
     }
 
-  const user = await User.findOne({username:username})
+    // find user
+    const user = await User.findById(userId);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if(avatar_index) user.avatar_index = avatar_index
-    if(frame_index)  user.frame_index = frame_index
+    // Update fields ONLY if provided (even if value === 0)
+    if (typeof username !== "undefined") user.username = username;
+    if (typeof avatar_index !== "undefined") user.avatar_index = avatar_index;
+    if (typeof frame_index !== "undefined") user.frame_index = frame_index;
 
-    await user.save({new:true})
+    await user.save(); // no { new: true } needed
 
-    res.json({ message: "Profile updated", user: user });
+    res.json({ message: "Profile updated", user });
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 router.get("/time", async (req, res)=>{
   const date = Date.now()
