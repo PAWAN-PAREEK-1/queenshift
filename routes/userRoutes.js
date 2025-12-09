@@ -124,7 +124,7 @@ router.get("/user", async (req, res) => {
 
   } catch (err) {
     console.error("Error fetching user data:", err);
-    res.status(500).json({ error: "Server error while retrieving user data" });
+    res.status(500).json({ error: "Server error while retrieving user data", err });
   }
 });
 
