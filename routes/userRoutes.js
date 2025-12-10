@@ -145,9 +145,9 @@ router.post("/level-complete", async (req, res) => {
         });
     }
 
-    if (!["easy", "medium", "hard", "expert"].includes(mode)) {
-      return res.status(400).json({ message: "Invalid mode provided" });
-    }
+    // if (!["easy", "medium", "hard", "expert"].includes(mode)) {
+    //   return res.status(400).json({ message: "Invalid mode provided" });
+    // }
 
     const user = await User.findOne({ playerId });
     if (!user) {
@@ -162,17 +162,17 @@ router.post("/level-complete", async (req, res) => {
 
     const expectedLevel = progress.current_level + 1;
 
-    if (requestedLevel < expectedLevel) {
-      return res.status(400).json({
-        message: `Level ${requestedLevel} in ${mode} mode is already completed. Current level is ${expectedLevel}.`,
-      });
-    }
+    // if (requestedLevel < expectedLevel) {
+    //   return res.status(400).json({
+    //     message: `Level ${requestedLevel} in ${mode} mode is already completed. Current level is ${expectedLevel}.`,
+    //   });
+    // }
 
-    if (requestedLevel > expectedLevel) {
-      return res.status(400).json({
-        message: `You must complete level ${expectedLevel} before attempting level ${requestedLevel}.`,
-      });
-    }
+    // if (requestedLevel > expectedLevel) {
+    //   return res.status(400).json({
+    //     message: `You must complete level ${expectedLevel} before attempting level ${requestedLevel}.`,
+    //   });
+    // }
 
     // 2-4. Update user's progress and save
     progress.level_times.set(requestedLevel.toString(), timeTaken);
