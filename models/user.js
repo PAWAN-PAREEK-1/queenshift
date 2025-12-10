@@ -26,6 +26,11 @@ const userSchema = new mongoose.Schema({
     medium: { type: levelProgressSchema, default: () => ({}) },
     hard: { type: levelProgressSchema, default: () => ({}) },
     expert: { type: levelProgressSchema, default: () => ({}) },
+    dailychallenge: { type: levelProgressSchema, default: () => ({}) },
+    weeklychallenge: { type: levelProgressSchema, default: () => ({}) },
+    theleague: { type: levelProgressSchema, default: () => ({}) },
+    timerush: { type: levelProgressSchema, default: () => ({}) },
+    twistermode: { type: levelProgressSchema, default: () => ({}) },
   },
     playerId:{
     type:String,
