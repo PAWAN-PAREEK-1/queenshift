@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const levelSchema = new mongoose.Schema({
   mode: {
     type: String,
-    enum: ["easy", "medium", "hard", "expert"],
+    // enum: ["easy", "medium", "hard", "expert"],
     required: true
   },
   level: {

@@ -112,12 +112,12 @@ router.get("/user", async (req, res) => {
         avatar_index: user.avatar_index,
         frame_index: user.frame_index,
         playerId: user.playerId,
-        current_levels: {
-            easy: user.levels.easy?.current_level || 0,
-            medium: user.levels.medium?.current_level || 0,
-            hard: user.levels.hard?.current_level || 0,
-            expert: user.levels.expert?.current_level || 0,
-        }
+        // current_levels: {
+        //     easy: user.levels.easy?.current_level || 0,
+        //     medium: user.levels.medium?.current_level || 0,
+        //     hard: user.levels.hard?.current_level || 0,
+        //     expert: user.levels.expert?.current_level || 0,
+        // }
     };
 
     return res.status(200).json({ user: formattedUser });
@@ -227,9 +227,9 @@ router.post("/leader", async (req, res) => {
     const { mode, limit, order, level } = req.body; // <-- Added 'level'
 
     // --- Input Validation ---
-    if (!["easy", "medium", "hard", "expert"].includes(mode)) {
-      return res.status(400).json({ message: "Invalid mode provided" });
-    }
+    // if (!["easy", "medium", "hard", "expert"].includes(mode)) {
+    //   return res.status(400).json({ message: "Invalid mode provided" });
+    // }
     if (level === undefined || isNaN(parseInt(level, 10))) {
       return res.status(400).json({ message: "Level number is required and must be a valid number" });
     }
