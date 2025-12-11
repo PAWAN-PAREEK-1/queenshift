@@ -35,7 +35,13 @@ const userSchema = new mongoose.Schema({
     playerId:{
     type:String,
     required:true
-  }
+  },
+ 
+    email:{
+      unique:true,
+      required:false
+    }
+
 });
 
 export default mongoose.model("User", userSchema);

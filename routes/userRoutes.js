@@ -73,10 +73,10 @@ router.get("/time", async (req, res) => {
 router.get("/user", async (req, res) => {
   // Assuming playerId is correctly passed in the request body, as shown in your original code.
   // NOTE: For GET requests, query parameters (req.query) are often preferred over req.body.
-  const { playerId } = req.body;
+  const { email } = req.body;
 
-  if (!playerId) {
-      return res.status(400).json({ message: "playerId is required" });
+  if (!email) {
+      return res.status(400).json({ message: "email is required" });
   }
 
   try {
@@ -95,7 +95,7 @@ router.get("/user", async (req, res) => {
         // We will keep the main _id for potential client use.
     };
 
-    const user = await User.findOne({ playerId })
+    const user = await User.findOne({ email })
       .select(projection) // Apply the projection
       .lean(); // Use .lean() for faster query performance since we don't need Mongoose documents
 
@@ -112,6 +112,7 @@ router.get("/user", async (req, res) => {
         avatar_index: user.avatar_index,
         frame_index: user.frame_index,
         playerId: user.playerId,
+        email: user.email
         // current_levels: {
         //     easy: user.levels.easy?.current_level || 0,
         //     medium: user.levels.medium?.current_level || 0,
