@@ -9,7 +9,7 @@ const router = express.Router();
 // ----------------------
 router.post("/signup", async (req, res) => {
   try {
-    const { username, avatar_index, frame_index } = req.body;
+    const { username, avatar_index, frame_index, email } = req.body;
 
     if (!username) {
       return res
@@ -17,16 +17,23 @@ router.post("/signup", async (req, res) => {
         .json({ message: "username and avatar_index are required" });
     }
 
-    const isExist = await User.findOne({ username });
+      const isExist = await User.findOne({
+      $or: [
+          { username: username }, // Check if username exists
+          { email: email }       // Check if email exists (you'll need to define 'email')
+      ]
+      });
     if (isExist)
-      return res.status(400).json({ message: "Username already exists" });
+      return res.status(400).json({ message: "Username or email already exists" });
 
     const playerId = crypto.randomBytes(16).toString("hex");
 
-    const user = new User({ username, frame_index, avatar_index, playerId });
+    const user = new User({ username, frame_index, avatar_index, playerId, email });
     await user.save();
 
-    res.json({ message: "Signup successful", user });
+    res.json({ message: "Signup successful", username: user.username, frame_index:user.frame_index, avatar_index:user.avatar_index, playerId:user.playerId, email:user.email  });
+
+    res.json()
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
