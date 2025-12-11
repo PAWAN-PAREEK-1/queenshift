@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema({
     expert: { type: levelProgressSchema, default: () => ({}) },
     dailyquest: { type: levelProgressSchema, default: () => ({}) },
     weeklychallenge: { type: levelProgressSchema, default: () => ({}) },
-    theleague: { type: levelProgressSchema, default: () => ({}) },
+    thetower: { type: levelProgressSchema, default: () => ({}) },
     timerush: { type: levelProgressSchema, default: () => ({}) },
     twistermode: { type: levelProgressSchema, default: () => ({}) },
   },
