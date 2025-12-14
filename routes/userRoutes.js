@@ -53,8 +53,8 @@ router.post("/signup", async (req, res) => {
 // ----------------------
 router.post("/update", async (req, res) => {
   try {
-    const { userId, username, avatar_index, frame_index } = req.body;
-
+    const { playerId, username, avatar_index, frame_index } = req.body;
+    const userId = playerId
     if (!userId) {
       return res.status(400).json({ message: "userId is required" });
     }
