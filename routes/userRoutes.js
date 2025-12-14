@@ -9,22 +9,31 @@ const router = express.Router();
 // ----------------------
 router.post("/signup", async (req, res) => {
   try {
+
     const { username, avatar_index, frame_index, email } = req.body;
 
-    if (!username) {
-      return res
-        .status(400)
-        .json({ message: "username and avatar_index are required" });
+   if (!username) {
+      return res.status(400).json({
+        message: "username is required"
+      });
     }
 
-      const isExist = await User.findOne({
-      $or: [
-          { username: username }, // Check if username exists
-          { email: email }       // Check if email exists (you'll need to define 'email')
-      ]
+    // Build OR condition dynamically
+    const orConditions = [{ username }];
+
+    if (email) {
+      orConditions.push({ email });
+    }
+
+    const isExist = await User.findOne({
+      $or: orConditions
+    });
+
+    if (isExist) {
+      return res.status(400).json({
+        message: "Username  already exists"
       });
-    if (isExist)
-      return res.status(400).json({ message: "Username or email already exists" });
+    }
 
     const playerId = crypto.randomBytes(16).toString("hex");
 
@@ -303,6 +312,8 @@ router.post("/leader", async (req, res) => {
 
 
 
+
+
 router.post("/user-rank", async (req, res) => {
   try {
     const { playerId, mode, level } = req.body;
@@ -383,4 +394,82 @@ router.post("/user-rank", async (req, res) => {
     res.status(500).json({ error: "Server error during rank retrieval" });
   }
 });
+
+
+router.post("/bulk-signup", async (req, res) => {
+  try {
+    const { users } = req.body;
+
+    if (!Array.isArray(users) || users.length === 0) {
+      return res.status(400).json({
+        message: "users array is required"
+      });
+    }
+
+    const operations = [];
+    const skippedUsers = [];
+
+    for (const user of users) {
+      const { username, avatar_index, frame_index, email } = user;
+
+      if (!username) {
+        skippedUsers.push({
+          user,
+          reason: "Username missing"
+        });
+        continue;
+      }
+
+      // Build user document safely
+      const userDoc = {
+        username,
+        avatar_index: avatar_index ?? 0,
+        frame_index: frame_index ?? 0,
+        playerId: crypto.randomBytes(16).toString("hex")
+      };
+
+      // ONLY add email if provided
+      if (email) {
+        userDoc.email = email;
+      }
+
+      operations.push({
+        insertOne: {
+          document: userDoc
+        }
+      });
+    }
+
+    if (operations.length === 0) {
+      return res.status(400).json({
+        message: "No valid users to insert",
+        skippedUsers
+      });
+    }
+
+    let result;
+    try {
+      result = await User.bulkWrite(operations, { ordered: false });
+    } catch (err) {
+      // Ignore duplicate key errors but capture info
+      if (err.code !== 11000) {
+        throw err;
+      }
+      result = err.result;
+    }
+
+    res.json({
+      message: "Bulk signup completed",
+      insertedCount: result?.insertedCount || 0,
+      skippedCount: skippedUsers.length,
+      skippedUsers
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      error: err.message
+    });
+  }
+});
+
 export default router;
