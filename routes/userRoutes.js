@@ -61,10 +61,12 @@ router.post("/update", async (req, res) => {
     // find user
     const user = await User.findOne({playerId:userId});
 
-    if (!user || user.username == username) {
-      return res
-        .status(404)
-        .json({ message: "User not found or username already exists" });
+     if (typeof username !== "undefined" && username !== user.username) {
+      const usernameExists = await User.findOne({ username });
+      if (usernameExists) {
+        return res.status(409).json({ message: "Username already exists" });
+      }
+      user.username = username;
     }
 
     // Update fields ONLY if provided (even if value === 0)
