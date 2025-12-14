@@ -42,7 +42,6 @@ router.post("/signup", async (req, res) => {
 
     res.json({ message: "Signup successful", username: user.username, frame_index:user.frame_index, avatar_index:user.avatar_index, playerId:user.playerId, email:user.email  });
 
-    res.json()
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -75,7 +74,8 @@ router.post("/update", async (req, res) => {
 
     await user.save(); // no { new: true } needed
 
-    res.json({ message: "Profile updated", user });
+        res.json({ message: "Profile Update", username: user.username, frame_index:user.frame_index, avatar_index:user.avatar_index, playerId:user.playerId, email:user.email  });
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
