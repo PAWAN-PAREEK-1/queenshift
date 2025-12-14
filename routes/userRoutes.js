@@ -62,7 +62,9 @@ router.post("/update", async (req, res) => {
 
     // find user
     const user = await User.findOne({playerId:userId});
-
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
      if (typeof username !== "undefined" && username !== user.username) {
       const usernameExists = await User.findOne({ username });
       if (usernameExists) {
