@@ -68,7 +68,7 @@ router.post("/update", async (req, res) => {
     }
 
     // Update fields ONLY if provided (even if value === 0)
-    if (typeof username !== "undefined") user.username = username;
+    if (typeof username !== "undefined" && user.username != username) user.username = username;
     if (typeof avatar_index !== "undefined") user.avatar_index = avatar_index;
     if (typeof frame_index !== "undefined") user.frame_index = frame_index;
 
