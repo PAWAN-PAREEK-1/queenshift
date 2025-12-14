@@ -60,7 +60,7 @@ router.post("/update", async (req, res) => {
     }
 
     // find user
-    const user = await User.findById(userId);
+    const user = await User.findOne({playerId:userId});
 
     if (!user || user.username == username) {
       return res
