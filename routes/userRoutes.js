@@ -2,6 +2,7 @@ import express from "express";
 import User from "../models/user.js";
 import crypto from "crypto";
 import Level from "../models/level.js";
+import { connectDB } from "../models/db.js";
 const router = express.Router();
 
 // ----------------------
@@ -9,7 +10,7 @@ const router = express.Router();
 // ----------------------
 router.post("/signup", async (req, res) => {
   try {
-
+    await connectDB();
     const { username, avatar_index, frame_index, email } = req.body;
 
    if (!username) {
@@ -52,6 +53,7 @@ router.post("/signup", async (req, res) => {
 // ----------------------
 router.post("/update", async (req, res) => {
   try {
+    await connectDB();
     const { playerId, username, avatar_index, frame_index } = req.body;
     const userId = playerId
     if (!userId) {
@@ -92,6 +94,7 @@ router.get("/user", async (req, res) => {
   // Assuming playerId is correctly passed in the request body, as shown in your original code.
   // NOTE: For GET requests, query parameters (req.query) are often preferred over req.body.
   const { email } = req.body;
+  await connectDB();
 
   if (!email) {
       return res.status(400).json({ message: "email is required" });
@@ -152,6 +155,7 @@ router.get("/user", async (req, res) => {
 // Corrected and improved /level-complete route
 router.post("/level-complete", async (req, res) => {
   try {
+    await connectDB();
     const { playerId, mode, level, time } = req.body;
 
     // ... (Input Validation and User Retrieval - Kept as is) ...
@@ -243,6 +247,7 @@ router.post("/level-complete", async (req, res) => {
 
 router.post("/leader", async (req, res) => {
   try {
+    await connectDB();
     const { mode, limit, order, level } = req.body; // <-- Added 'level'
 
     // --- Input Validation ---

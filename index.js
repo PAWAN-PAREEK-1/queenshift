@@ -9,11 +9,11 @@ app.use(cors());
 app.use(express.json());
 dotenv.config();
 // connect to MongoDB
-mongoose
-  .connect(process.env.MONOGO_URL)
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.log(err));
 
+connectDB().catch(err => {
+  console.error("Initial MongoDB connection failed", err);
+  process.exit(1); // exit if DB cannot connect
+});
 app.use("/api/user", userRoutes);
 
 // start server
