@@ -120,7 +120,7 @@ router.get("/user", async (req, res) => {
     if (!user) {
       return res
         .status(404)
-        .json({ message: "User not found with this playerId" });
+        .json({ message: "User not found with this email" });
     }
 
     // --- Optional: Re-structure the levels object for a flatter response (cleaner client use) ---
