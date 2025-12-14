@@ -1,21 +1,23 @@
 import mongoose from "mongoose";
 
-let isConnected = false; // track connection
+let cached = global.mongoose;
+
+if (!cached) cached = global.mongoose = { conn: null, promise: null };
 
 export async function connectDB() {
-  if (isConnected) {
-    // Already connected
-    return;
+  if (cached.conn) {
+    return cached.conn; // reuse existing connection
   }
 
-  try {
-    const db = await mongoose.connect(process.env.MONOGO_URL, {
-      bufferCommands: false, // fail immediately if DB not connected
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(process.env.MONOGO_URL, {
+      bufferCommands: false,
+    }).then((db) => {
+      console.log("✅ MongoDB connected");
+      return db;
     });
-    isConnected = db.connections[0].readyState === 1;
-    console.log("✅ MongoDB connected");
-  } catch (err) {
-    console.error("❌ MongoDB connection failed:", err);
-    throw err;
   }
+
+  cached.conn = await cached.promise;
+  return cached.conn;
 }
