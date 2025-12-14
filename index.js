@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import userRoutes from "./routes/userRoutes.js";
+import { connectDB } from "./models/db.js";
 
 const app = express();
 app.use(cors());
