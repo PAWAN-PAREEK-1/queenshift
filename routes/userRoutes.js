@@ -3,6 +3,7 @@ import User from "../models/user.js";
 import crypto from "crypto";
 import Level from "../models/level.js";
 import { connectDB } from "../models/db.js";
+import transaction from "../models/transaction.js";
 const router = express.Router();
 
 // ----------------------
@@ -407,6 +408,7 @@ router.post("/user-rank", async (req, res) => {
 
 router.post("/bulk-signup", async (req, res) => {
   try {
+    await connectDB();
     const { users } = req.body;
 
     if (!Array.isArray(users) || users.length === 0) {
@@ -481,4 +483,66 @@ router.post("/bulk-signup", async (req, res) => {
   }
 });
 
+
+router.post("/transaction", async (req, res) => {
+  try {
+    await connectDB();
+    const { transactionId, time } = req.body;
+
+    if (!transactionId || !time) {
+      return res.status(400).json({
+        message: "transactionId and time are required"
+      });
+    }
+
+    const transaction = await transaction.create({
+      transactionId,
+      time
+    });
+
+    res.status(201).json({
+      message: "transaction stored successfully",
+      data: transaction
+    });
+
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({
+        message: "transaction already exists"
+      });
+    }
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
+});
+
+router.get("/transaction/:transactionId", async (req, res) => {
+  try {
+    await connectDB();
+    const { transactionId } = req.params;
+
+    const transaction = await transaction.findOne(
+      { transactionId },
+      { _id: 0, transactionId: 1, time: 1 }
+    );
+
+    if (!transaction) {
+      return res.status(404).json({
+        message: "transaction not found"
+      });
+    }
+
+    res.json({
+      transactionId: transaction.transactionId,
+      time: transaction.time
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      error: err.message
+    });
+  }
+});
 export default router;
