@@ -396,7 +396,8 @@ router.post("/user-rank", async (req, res) => {
     res.json({
       username: user.username,
       mode: mode,
-      rank: userRank
+      rank: userRank,
+      time: userTime,
     });
 
   } catch (err) {
