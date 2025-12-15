@@ -326,6 +326,7 @@ router.post("/leader", async (req, res) => {
 
 router.post("/user-rank", async (req, res) => {
   try {
+     await connectDB();
     const { playerId, mode, level } = req.body;
 
     // --- 1. Input Validation ---
