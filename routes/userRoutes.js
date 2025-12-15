@@ -346,7 +346,7 @@ router.post("/user-rank", async (req, res) => {
     );
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(200).json({ message: "User not found" });
     }
 
     // 🔥 FIX: Correctly access the deeply nested time value on the Mongoose Document
@@ -356,7 +356,7 @@ router.post("/user-rank", async (req, res) => {
     // The optional chaining (?. ) helps prevent crashes if the mode subdocument doesn't exist.
 
     if (userTime === undefined || userTime === 0) {
-      return res.status(404).json({
+      return res.status(200).json({
         message: `data not found`,
       });
     }
