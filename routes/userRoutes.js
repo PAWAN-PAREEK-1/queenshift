@@ -419,7 +419,7 @@ router.post("/bulk-signup", async (req, res) => {
     const skippedUsers = [];
 
     for (const user of users) {
-      const { username, avatar_index, frame_index, email } = user;
+      const { username, avatar_index, frame_index, email ,playerId} = user;
 
       if (!username) {
         skippedUsers.push({
@@ -434,7 +434,7 @@ router.post("/bulk-signup", async (req, res) => {
         username,
         avatar_index: avatar_index ?? 0,
         frame_index: frame_index ?? 0,
-        playerId: crypto.randomBytes(16).toString("hex")
+        playerId: playerId == undefiend || null ? crypto.randomBytes(16).toString("hex") : playerId
       };
 
       // ONLY add email if provided
