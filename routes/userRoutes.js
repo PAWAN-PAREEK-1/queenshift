@@ -545,4 +545,142 @@ router.get("/get-transaction", async (req, res) => {
     });
   }
 });
+
+router.post("/bulk-level-complete", async (req, res) => {
+  try {
+    await connectDB();
+
+    const { records } = req.body;
+
+    if (!Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({
+        message: "records array is required"
+      });
+    }
+
+    // 🔒 Safety limit for Vercel
+    // if (records.length > 300) {
+    //   return res.status(413).json({
+    //     message: "Max 300 records per request"
+    //   });
+    // }
+
+    const playerIds = records.map(r => r.playerId);
+
+    // 1️⃣ Fetch all users in ONE query
+    const users = await User.find({ playerId: { $in: playerIds } });
+    const userMap = new Map(users.map(u => [u.playerId, u]));
+
+    const userOps = [];
+    const levelOpsMap = new Map(); // key = mode_level
+    const skipped = [];
+
+    for (const r of records) {
+      const { playerId, mode, level, time } = r;
+
+      if (!playerId || !mode || level === undefined || time === undefined) {
+        skipped.push({ record: r, reason: "Missing fields" });
+        continue;
+      }
+
+      const user = userMap.get(playerId);
+      if (!user) {
+        skipped.push({ record: r, reason: "User not found" });
+        continue;
+      }
+
+      const progress = user.levels[mode];
+      if (!progress) {
+        skipped.push({ record: r, reason: "Invalid mode" });
+        continue;
+      }
+
+      const requestedLevel = Number(level);
+      const timeTaken = Number(time);
+
+      // ---- User Progress Update ----
+      progress.level_times.set(requestedLevel.toString(), timeTaken);
+      progress.current_level = Math.max(
+        progress.current_level,
+        requestedLevel
+      );
+
+      const times = [...progress.level_times.values()];
+      const totalTime = times.reduce((a, b) => a + b, 0);
+      progress.average_time = totalTime / times.length;
+
+      userOps.push({
+        updateOne: {
+          filter: { _id: user._id },
+          update: {
+            $set: {
+              [`levels.${mode}`]: progress
+            }
+          }
+        }
+      });
+
+      // ---- Global Level Stats (grouped) ----
+      const key = `${mode}_${requestedLevel}`;
+
+      if (!levelOpsMap.has(key)) {
+        levelOpsMap.set(key, {
+          mode,
+          level: requestedLevel,
+          total_time: 0,
+          attempts: 0
+        });
+      }
+
+      const entry = levelOpsMap.get(key);
+      entry.total_time += timeTaken;
+      entry.attempts += 1;
+    }
+
+    // 2️⃣ Execute USER bulk write
+    if (userOps.length > 0) {
+      await User.bulkWrite(userOps, { ordered: false });
+    }
+
+    // 3️⃣ Prepare LEVEL bulk write
+    const levelOps = [];
+
+    for (const entry of levelOpsMap.values()) {
+      levelOps.push({
+        updateOne: {
+          filter: { mode: entry.mode, level: entry.level },
+          update: {
+            $inc: {
+              total_time: entry.total_time,
+              attempts: entry.attempts
+            },
+            $setOnInsert: {
+              mode: entry.mode,
+              level: entry.level
+            }
+          },
+          upsert: true
+        }
+      });
+    }
+
+    if (levelOps.length > 0) {
+      await Level.bulkWrite(levelOps, { ordered: false });
+    }
+
+    return res.json({
+      message: "Bulk level completion processed",
+      processed: records.length,
+      skippedCount: skipped.length,
+      skipped
+    });
+
+  } catch (err) {
+    console.error("Bulk level error:", err);
+    res.status(500).json({
+      error: "Server error during bulk level completion"
+    });
+  }
+});
+
 export default router;
