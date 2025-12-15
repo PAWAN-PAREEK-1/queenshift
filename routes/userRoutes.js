@@ -434,7 +434,7 @@ router.post("/bulk-signup", async (req, res) => {
         username,
         avatar_index: avatar_index ?? 0,
         frame_index: frame_index ?? 0,
-        playerId: playerId == undefiend || null ? crypto.randomBytes(16).toString("hex") : playerId
+        playerId: playerId ?? crypto.randomBytes(16).toString("hex")
       };
 
       // ONLY add email if provided
