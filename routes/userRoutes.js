@@ -495,14 +495,14 @@ router.post("/transaction", async (req, res) => {
       });
     }
 
-    const transaction = await transaction.create({
+    const transactions = await transaction.create({
       transactionId,
       time
     });
 
     res.status(201).json({
       message: "transaction stored successfully",
-      data: transaction
+      data: transactions
     });
 
   } catch (err) {
@@ -518,25 +518,25 @@ router.post("/transaction", async (req, res) => {
   }
 });
 
-router.get("/transaction/:transactionId", async (req, res) => {
+router.get("/get-transaction", async (req, res) => {
   try {
     await connectDB();
-    const { transactionId } = req.params;
+    const { transactionId } = req.body;
 
-    const transaction = await transaction.findOne(
+    const transactions = await transaction.findOne(
       { transactionId },
       { _id: 0, transactionId: 1, time: 1 }
     );
 
-    if (!transaction) {
+    if (!transactions) {
       return res.status(404).json({
         message: "transaction not found"
       });
     }
 
     res.json({
-      transactionId: transaction.transactionId,
-      time: transaction.time
+      transactionId: transactions.transactionId,
+      time: transactions.time
     });
 
   } catch (err) {
