@@ -4,17 +4,17 @@ import crypto from "crypto";
 import Level from "../models/level.js";
 import { connectDB } from "../models/db.js";
 import transaction from "../models/transaction.js";
-import { LEAGUES } from "../leagueRules.js";
-// import leagueProgress from "../models/LeagueProgress.js";
+// import { LEAGUES } from "../leagueRules.js";
+// import leagueProgress from "../models/leagueProgress.js";
 const router = express.Router();
 
 
 
-export function calculateLeague(score) {
-  return LEAGUES.find(
-    (l) => score >= l.min && score <= l.max
-  ) || { name: "gold", level: 1 };
-}
+// export function calculateLeague(score) {
+//   return LEAGUES.find(
+//     (l) => score >= l.min && score <= l.max
+//   ) || { name: "gold", level: 1 };
+// }
 
 // ----------------------
 // Signup Route
