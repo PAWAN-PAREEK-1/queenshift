@@ -4,17 +4,17 @@ import crypto from "crypto";
 import Level from "../models/level.js";
 import { connectDB } from "../models/db.js";
 import transaction from "../models/transaction.js";
-// import { LEAGUES } from "../leagueRules.js";
-// import leagueProgress from "../models/leagueProgress.js";
+import { LEAGUES } from "../leagueRules.js";
+import LeagueProgress from "../models/LeagueProgress.js";
 const router = express.Router();
 
 
 
-// export function calculateLeague(score) {
-//   return LEAGUES.find(
-//     (l) => score >= l.min && score <= l.max
-//   ) || { name: "gold", level: 1 };
-// }
+export function calculateLeague(score) {
+  return LEAGUES.find(
+    (l) => score >= l.min && score <= l.max
+  ) || { name: "gold", level: 1 };
+}
 
 // ----------------------
 // Signup Route
@@ -702,117 +702,117 @@ router.post("/bulk-level-complete", async (req, res) => {
 });
 
 
-// router.post("/league/score-update", async (req, res) => {
-//   try {
-//     await connectDB();
+router.post("/league/score-update", async (req, res) => {
+  try {
+    await connectDB();
 
-//     const { playerId, score } = req.body;
+    const { playerId, score } = req.body;
 
-//     if (!playerId || score === undefined) {
-//       return res.status(400).json({
-//         message: "playerId and score are required",
-//       });
-//     }
+    if (!playerId || score === undefined) {
+      return res.status(400).json({
+        message: "playerId and score are required",
+      });
+    }
 
-//     const scoreToAdd = Number(score);
-//     if (Number.isNaN(scoreToAdd)) {
-//       return res.status(400).json({ message: "Invalid score" });
-//     }
+    const scoreToAdd = Number(score);
+    if (Number.isNaN(scoreToAdd)) {
+      return res.status(400).json({ message: "Invalid score" });
+    }
 
-//     // 1️⃣ Find or create progress
-//     let progress = await leagueProgress.findOne({ playerId });
-//     if (!progress) {
-//       progress = new leagueProgress({ playerId });
-//     }
+    // 1️⃣ Find or create progress
+    let progress = await LeagueProgress.findOne({ playerId });
+    if (!progress) {
+      progress = new LeagueProgress({ playerId });
+    }
 
-//     // 2️⃣ Update score
-//     progress.total_score += scoreToAdd;
+    // 2️⃣ Update score
+    progress.total_score += scoreToAdd;
 
-//     // 3️⃣ Update league
-//     progress.league = calculateLeague(progress.total_score);
+    // 3️⃣ Update league
+    progress.league = calculateLeague(progress.total_score);
 
-//     await progress.save();
+    await progress.save();
 
-//     // 4️⃣ Response (ONLY user info)
-//     return res.json({
-//       playerId,
-//       total_score: progress.total_score,
-//       league: progress.league,
-//     });
+    // 4️⃣ Response (ONLY user info)
+    return res.json({
+      playerId,
+      total_score: progress.total_score,
+      league: progress.league,
+    });
 
-//   } catch (err) {
-//     console.error("League score update error:", err);
-//     return res.status(500).json({ error: "Server error" });
-//   }
-// });
+  } catch (err) {
+    console.error("League score update error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
 
 
-// router.get("/league/leaderboard", async (req, res) => {
-//   try {
-//     await connectDB();
+router.get("/league/leaderboard", async (req, res) => {
+  try {
+    await connectDB();
 
-//     const limit = Math.max(1, Number(req.query.limit) || 3);
+    const limit = Math.max(1, Number(req.query.limit) || 3);
 
-//     const leaderboard = await leagueProgress.aggregate([
-//       // Join user data
-//       {
-//         $lookup: {
-//           from: "users",
-//           localField: "playerId",
-//           foreignField: "playerId",
-//           as: "user",
-//         },
-//       },
-//       { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+    const leaderboard = await LeagueProgress.aggregate([
+      // Join user data
+      {
+        $lookup: {
+          from: "users",
+          localField: "playerId",
+          foreignField: "playerId",
+          as: "user",
+        },
+      },
+      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
 
-//       // Sort players by score DESC
-//       { $sort: { total_score: -1 } },
+      // Sort players by score DESC
+      { $sort: { total_score: -1 } },
 
-//       // Group by league + level
-//       {
-//         $group: {
-//           _id: {
-//             league: "$league.name",
-//             level: "$league.level",
-//           },
-//           players: {
-//             $push: {
-//               playerId: "$playerId",
-//               score: "$total_score",
-//               avatar_index: { $ifNull: ["$user.avatar_index", 0] },
-//               frame_index: { $ifNull: ["$user.frame_index", 0] },
-//             },
-//           },
-//         },
-//       },
+      // Group by league + level
+      {
+        $group: {
+          _id: {
+            league: "$league.name",
+            level: "$league.level",
+          },
+          players: {
+            $push: {
+              playerId: "$playerId",
+              score: "$total_score",
+              avatar_index: { $ifNull: ["$user.avatar_index", 0] },
+              frame_index: { $ifNull: ["$user.frame_index", 0] },
+            },
+          },
+        },
+      },
 
-//       // Take top N players per level
-//       {
-//         $project: {
-//           _id: 0,
-//           league: {
-//             name: "$_id.league",
-//             level: "$_id.level",
-//           },
-//           topPlayers: { $slice: ["$players", limit] },
-//         },
-//       },
+      // Take top N players per level
+      {
+        $project: {
+          _id: 0,
+          league: {
+            name: "$_id.league",
+            level: "$_id.level",
+          },
+          topPlayers: { $slice: ["$players", limit] },
+        },
+      },
 
-//       // Sort leagues properly: gold → diamond, level 1 → 3
-//       {
-//         $sort: {
-//           "league.name": 1,
-//           "league.level": 1,
-//         },
-//       },
-//     ]);
+      // Sort leagues properly: gold → diamond, level 1 → 3
+      {
+        $sort: {
+          "league.name": 1,
+          "league.level": 1,
+        },
+      },
+    ]);
 
-//     return res.json({ leaderboard });
-//   } catch (err) {
-//     console.error("Leaderboard error:", err);
-//     return res.status(500).json({ error: "Server error" });
-//   }
-// });
+    return res.json({ leaderboard });
+  } catch (err) {
+    console.error("Leaderboard error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
 
 
 
