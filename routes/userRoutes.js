@@ -4,8 +4,8 @@ import crypto from "crypto";
 import Level from "../models/level.js";
 import { connectDB } from "../models/db.js";
 import transaction from "../models/transaction.js";
-import LeagueProgress from "../models/LeagueProgress.js";
 import { LEAGUES } from "../leagueRules.js";
+import leagueProgress from "../models/LeagueProgress.js";
 const router = express.Router();
 
 
@@ -720,9 +720,9 @@ router.post("/league/score-update", async (req, res) => {
     }
 
     // 1️⃣ Find or create progress
-    let progress = await LeagueProgress.findOne({ playerId });
+    let progress = await leagueProgress.findOne({ playerId });
     if (!progress) {
-      progress = new LeagueProgress({ playerId });
+      progress = new leagueProgress({ playerId });
     }
 
     // 2️⃣ Update score
@@ -753,7 +753,7 @@ router.get("/league/leaderboard", async (req, res) => {
 
     const limit = Math.max(1, Number(req.query.limit) || 3);
 
-    const leaderboard = await LeagueProgress.aggregate([
+    const leaderboard = await leagueProgress.aggregate([
       // Join user data
       {
         $lookup: {

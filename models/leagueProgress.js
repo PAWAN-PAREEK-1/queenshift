@@ -1,4 +1,4 @@
-// models/LeagueProgress.js
+// models/leagueProgress.js
 import mongoose from "mongoose";
 
 const leagueProgressSchema = new mongoose.Schema(
@@ -31,4 +31,4 @@ const leagueProgressSchema = new mongoose.Schema(
 
 
 
-export default mongoose.model("LeagueProgress", leagueProgressSchema);
+export default mongoose.model("leagueProgress", leagueProgressSchema);
