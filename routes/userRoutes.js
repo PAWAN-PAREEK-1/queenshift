@@ -5,7 +5,7 @@ import Level from "../models/level.js";
 import { connectDB } from "../models/db.js";
 import transaction from "../models/transaction.js";
 import { LEAGUES } from "../leagueRules.js";
-import LeagueProgress from "../models/LeagueProgress.js";
+import LeagueProgress from "../models/LeagueProgress.js"; 
 const router = express.Router();
 
 
