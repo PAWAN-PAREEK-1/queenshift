@@ -159,92 +159,98 @@ router.get("/user", async (req, res) => {
 router.post("/level-complete", async (req, res) => {
   try {
     await connectDB();
+
     const { playerId, mode, level, time } = req.body;
 
-    // ... (Input Validation and User Retrieval - Kept as is) ...
-
+    // 1️⃣ Basic validation
     if (!playerId || !mode || level === undefined || time === undefined) {
-      return res
-        .status(400)
-        .json({
-          message: "Missing required fields: playerId, mode, level, time",
-        });
+      return res.status(400).json({
+        message: "Missing required fields: playerId, mode, level, time",
+      });
     }
 
-    // if (!["easy", "medium", "hard", "expert"].includes(mode)) {
-    //   return res.status(400).json({ message: "Invalid mode provided" });
-    // }
+    const requestedLevel = Number(level);
+    const timeTaken = Number(time);
 
+    if (Number.isNaN(requestedLevel) || Number.isNaN(timeTaken)) {
+      return res.status(400).json({
+        message: "Level and time must be valid numbers",
+      });
+    }
+
+    // 2️⃣ Find user
     const user = await User.findOne({ playerId });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
     const progress = user.levels[mode];
-    const requestedLevel = Number(level);
-    const timeTaken = Number(time);
+    if (!progress) {
+      return res.status(400).json({ message: "Invalid mode provided" });
+    }
 
-    // ... (Progression Logic - Kept as is) ...
+    // 3️⃣ Overwrite level time (replay-safe)
+    const levelKey = requestedLevel.toString();
+    const isReplay = progress.level_times.has(levelKey);
 
-    const expectedLevel = progress.current_level + 1;
+    progress.level_times.set(levelKey, timeTaken);
 
-    // if (requestedLevel < expectedLevel) {
-    //   return res.status(400).json({
-    //     message: `Level ${requestedLevel} in ${mode} mode is already completed. Current level is ${expectedLevel}.`,
-    //   });
-    // }
+    // 4️⃣ Advance level ONLY if this is the next new level
+    if (!isReplay && requestedLevel === progress.current_level + 1) {
+      progress.current_level = requestedLevel;
+    }
 
-    // if (requestedLevel > expectedLevel) {
-    //   return res.status(400).json({
-    //     message: `You must complete level ${expectedLevel} before attempting level ${requestedLevel}.`,
-    //   });
-    // }
-
-    // 2-4. Update user's progress and save
-    progress.level_times.set(requestedLevel.toString(), timeTaken);
-    progress.current_level = expectedLevel;
+    // 5️⃣ Recalculate user average (average of latest times per level)
     const times = [...progress.level_times.values()];
     const totalTime = times.reduce((a, b) => a + b, 0);
     progress.average_time = times.length > 0 ? totalTime / times.length : 0;
+
     await user.save();
 
-    // 5. Update Global Level Stats (Level Schema) - **This handles creation!**
-    let globalLevelStats = await Level.findOneAndUpdate(
-      { mode, level: requestedLevel }, // Query to find the existing level document
+    // 6️⃣ Update global per-attempt stats (analytics only)
+    await Level.findOneAndUpdate(
+      { mode, level: requestedLevel },
       {
-        // $inc will initialize fields to 0 if the document is new
         $inc: { total_time: timeTaken, attempts: 1 },
-        // If the document is created (upserted), explicitly set the mode and level
-        $setOnInsert: { mode: mode, level: requestedLevel }
+        $setOnInsert: { mode, level: requestedLevel },
       },
-      {
-        new: true,   // Return the updated (or newly created) document
-        upsert: true // ⭐ This ensures creation if the document is not found!
-      }
+      { upsert: true }
     );
 
-    // 6. Update global average time (calculated server-side for accuracy)
-    // The total_time and attempts are updated by $inc, now we can calculate the average.
-    // We use total_time and attempts from the returned document (globalLevelStats)
-    if (globalLevelStats.attempts > 0) {
-      globalLevelStats.average_time = globalLevelStats.total_time / globalLevelStats.attempts;
-    } else {
-      globalLevelStats.average_time = 0;
-    }
+    // 7️⃣ OPTION A: Calculate GLOBAL AVERAGE FROM USERS (same as Mongo shell)
+    const avgResult = await User.aggregate([
+      {
+        $match: {
+          [`levels.${mode}.level_times.${requestedLevel}`]: { $exists: true },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          averageTime: {
+            $avg: `$levels.${mode}.level_times.${requestedLevel}`,
+          },
+        },
+      },
+    ]);
 
-    // Save the document to persist the newly calculated average_time
-    await globalLevelStats.save();
+    const globalAverage =
+      avgResult.length > 0 ? avgResult[0].averageTime : 0;
 
+    // 8️⃣ Response
     return res.json({
       message: "Level completed and progress updated!",
-      // next_level: progress.current_level + 1,
-      average: globalLevelStats.average_time,
+      average: globalAverage,
     });
+
   } catch (err) {
     console.error("Error in /level-complete:", err);
-    res.status(500).json({ error: "Server error during level completion" });
+    return res.status(500).json({
+      error: "Server error during level completion",
+    });
   }
 });
+
 
 // Assume 'User' model is imported and 'router' is an Express router
 
