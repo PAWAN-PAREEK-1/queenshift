@@ -779,6 +779,7 @@ router.get("/league/leaderboard", async (req, res) => {
             $push: {
               playerId: "$playerId",
               score: "$total_score",
+              username: { $ifNull: ["$user.username", "Unknown"] },
               avatar_index: { $ifNull: ["$user.avatar_index", 0] },
               frame_index: { $ifNull: ["$user.frame_index", 0] },
             },
@@ -813,6 +814,59 @@ router.get("/league/leaderboard", async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 });
+
+
+router.get("/league/rank", async (req, res) => {
+  try {
+    await connectDB();
+
+    const { playerId } = req.body;
+
+    if (!playerId) {
+      return res.status(400).json({ error: "playerId is required" });
+    }
+
+    const result = await LeagueProgress.aggregate([
+      { $match: { playerId } },
+
+      // Join user to get username
+      {
+        $lookup: {
+          from: "users",
+          localField: "playerId",
+          foreignField: "playerId",
+          as: "user",
+        },
+      },
+      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+
+      {
+        $project: {
+          _id: 0,
+          playerId: 1,
+          score: "$total_score",
+          username: { $ifNull: ["$user.username", "Unknown"] },
+          avatar_index: { $ifNull: ["$user.avatar_index", 0] },
+          frame_index: { $ifNull: ["$user.frame_index", 0] },
+          league: {
+            name: "$league.name",
+            level: "$league.level",
+          },
+        },
+      },
+    ]);
+
+    if (!result.length) {
+      return res.status(404).json({ error: "Player not found" });
+    }
+
+    return res.json(result[0]);
+  } catch (err) {
+    console.error("Player rank error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
 
 
 
