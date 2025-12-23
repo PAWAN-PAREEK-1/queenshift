@@ -10,11 +10,7 @@ const router = express.Router();
 
 
 
-export function calculateLeague(score) {
-  return LEAGUES.find(
-    (l) => score >= l.min && score <= l.max
-  ) || { name: "gold", level: 1 };
-}
+export function calculateLeague(score) { const match = LEAGUES.find( l => score >= l.min && score <= l.max ); return match || { name: "bronze", level: 3 }; }
 
 // ----------------------
 // Signup Route
