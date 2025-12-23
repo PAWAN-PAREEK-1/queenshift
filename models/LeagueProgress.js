@@ -18,11 +18,11 @@ const LeagueProgressSchema = new mongoose.Schema(
     league: {
       name: {
         type: String, // gold | diamond
-        default: "gold",
+        default: "bronze",
       },
       level: {
         type: Number, // 1 | 2 | 3
-        default: 1,
+        default: 3,
       },
     },
   },
