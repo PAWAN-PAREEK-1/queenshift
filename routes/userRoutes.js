@@ -753,7 +753,7 @@ router.get("/league/leaderboard", async (req, res) => {
     await connectDB();
 
    // const limit = Math.max(1, Number(req.query.limit) || 3);
-    const limit = 50;
+    const limit = 5;
 
         console.log("📊 Aggregation started");
 
