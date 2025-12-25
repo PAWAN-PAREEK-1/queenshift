@@ -749,6 +749,9 @@ router.get("/league/leaderboard", async (req, res) => {
 
     const limit = Math.max(1, Number(req.query.limit) || 3);
 
+    console.log({limit}, "dgdgdfgddg");
+    
+
     const leaderboard = await LeagueProgress.aggregate([
       // Join user data
       {
