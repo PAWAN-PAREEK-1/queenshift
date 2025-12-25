@@ -808,7 +808,7 @@ router.get("/league/leaderboard", async (req, res) => {
       },
     ]);
 
-    console.log("after leader board");
+    console.error("after leader board");
     
 
     return res.json({ leaderboard });
