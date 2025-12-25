@@ -747,7 +747,8 @@ router.get("/league/leaderboard", async (req, res) => {
   try {
     await connectDB();
 
-    const limit = Math.max(1, Number(req.query.limit) || 3);
+   // const limit = Math.max(1, Number(req.query.limit) || 3);
+    const limit = 50;
 
     console.log({limit}, "dgdgdfgddg");
     
