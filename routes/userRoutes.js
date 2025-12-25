@@ -6,6 +6,7 @@ import { connectDB } from "../models/db.js";
 import transaction from "../models/transaction.js";
 import { LEAGUES } from "../leagueRules.js";
 import LeagueProgress from "../models/LeagueProgress.js";
+import { log } from "console";
 const router = express.Router();
 
 
@@ -369,7 +370,10 @@ router.post("/user-rank", async (req, res) => {
     // The optional chaining (?. ) helps prevent crashes if the mode subdocument doesn't exist.
 
     if (userTime === undefined || userTime === 0) {
+       console.error("data not found user rank hited ");
       return res.status(200).json({
+       
+        
         message: `data not found`,
       });
     }
