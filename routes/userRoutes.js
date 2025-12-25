@@ -744,14 +744,21 @@ router.post("/league/score-update", async (req, res) => {
 
 
 router.get("/league/leaderboard", async (req, res) => {
+  const startTime = Date.now();
   try {
     await connectDB();
 
    // const limit = Math.max(1, Number(req.query.limit) || 3);
     const limit = 50;
 
-    console.log({limit}, "dgdgdfgddg");
-    
+        console.log("📊 Aggregation started");
+
+    console.error({limit}, "dgdgdfgddg");
+    console.error("🚀 /league/leaderboard called");
+    console.error("📱 User-Agent:", req.headers["user-agent"]);
+    console.error("🌐 Origin:", req.headers.origin);
+    console.error("🧾 Query:", req.query);
+
 
     const leaderboard = await LeagueProgress.aggregate([
       // Join user data
@@ -808,13 +815,24 @@ router.get("/league/leaderboard", async (req, res) => {
       },
     ]);
 
-    console.error("after leader board");
+        console.error("✅ Aggregation finished");
+    console.error("📦 Leaderboard count:", leaderboard?.length);
+
+    // 5️⃣ Response time
+    console.error("⏱ Response time:", Date.now() - startTime, "ms");
     
 
     return res.json({ leaderboard });
   } catch (err) {
-    console.log("Leaderboard error:", err);
-    return res.status(500).json({ error: "Server error" });
+    console.error("❌ Leaderboard error");
+    console.error("Message:", err.message);
+    console.error("Stack:", err.stack);
+    console.error("Name:", err.name);
+
+    return res.status(500).json({
+      error: "Server error",
+      message: err.message,
+    });
   }
 });
 
