@@ -340,6 +340,9 @@ router.post("/leader", async (req, res) => {
 router.post("/user-rank", async (req, res) => {
   try {
      await connectDB();
+       console.error("📱 User-Agent:", req.headers["user-agent"]);
+    console.error("🌐 Origin:", req.headers.origin);
+    console.error("🧾 Query:", req.query);
     const { playerId, mode, level } = req.body;
 
     // --- 1. Input Validation ---
@@ -374,7 +377,7 @@ router.post("/user-rank", async (req, res) => {
       return res.status(200).json({
        
         
-        message: `data not found`,
+        message: `data not found ${userTime} `,
       });
     }
 
@@ -408,7 +411,7 @@ router.post("/user-rank", async (req, res) => {
     const totalPlayers = await User.countDocuments({
       [userLevelTimePath]: { $gt: 0 },
     });
-
+    console.error("user rank completed ", {playerId, mode, level})
     // --- 5. Return Response ---
     res.json({
       username: user.username,
@@ -748,12 +751,14 @@ router.post("/league/score-update", async (req, res) => {
 
 
 router.get("/league/leaderboard", async (req, res) => {
+    console.error( "in leader board   ");
+
   const startTime = Date.now();
   try {
     await connectDB();
 
    // const limit = Math.max(1, Number(req.query.limit) || 3);
-    const limit = 5;
+    const limit = 50;
 
         console.log("📊 Aggregation started");
 
