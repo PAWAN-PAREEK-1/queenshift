@@ -154,7 +154,7 @@ router.get("/user", async (req, res) => {
     return res.status(200).json({ user: formattedUser });
 
   } catch (err) {
-    console.error("Error fetching user data:", err);
+    console.log("Error fetching user data:", err);
     res.status(500).json({ error: "Server error while retrieving user data", err });
   }
 });
@@ -250,7 +250,7 @@ router.post("/level-complete", async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Error in /level-complete:", err);
+    console.log("Error in /level-complete:", err);
     return res.status(500).json({
       error: "Server error during level completion",
     });
@@ -327,7 +327,7 @@ router.post("/leader", async (req, res) => {
     res.json(formattedUsers);
 
   } catch (err) {
-    console.error("Error in /leader:", err);
+    console.log("Error in /leader:", err);
     res.status(500).json({ error: "Server error during leaderboard retrieval" });
   }
 });
@@ -414,7 +414,7 @@ router.post("/user-rank", async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Error in /user-rank:", err);
+    console.log("Error in /user-rank:", err);
     res.status(500).json({ error: "Server error during rank retrieval" });
   }
 });
@@ -690,7 +690,7 @@ router.post("/bulk-level-complete", async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Bulk level error:", err);
+    console.log("Bulk level error:", err);
     res.status(500).json({
       error: "Server error during bulk level completion"
     });
@@ -737,7 +737,7 @@ router.post("/league/score-update", async (req, res) => {
     });
 
   } catch (err) {
-    console.error("League score update error:", err);
+    console.log("League score update error:", err);
     return res.status(500).json({ error: "Server error" });
   }
 });
@@ -865,7 +865,7 @@ router.get("/league/rank", async (req, res) => {
 
     return res.json(result[0]);
   } catch (err) {
-    console.error("Player rank error:", err);
+    console.log("Player rank error:", err);
     return res.status(500).json({ error: "Server error" });
   }
 });
