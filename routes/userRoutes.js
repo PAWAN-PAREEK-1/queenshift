@@ -542,7 +542,7 @@ router.post("/transaction", async (req, res) => {
 router.get("/get-transaction", async (req, res) => {
   try {
     await connectDB();
-    const { transactionId } = req.body;
+    const { transactionId } = req.query;
     console.log({transactionId});
     
     const transactions = await transaction.findOne(
@@ -851,9 +851,9 @@ router.get("/league/leaderboard", async (req, res) => {
 router.get("/league/rank", async (req, res) => {
   try {
     await connectDB();
+    console.log("inside leque rank , " , req.body, req.query)
 
-    const { playerId } = req.body;
-    console.log("inside leque rank , " , playerId)
+    const { playerId } = req.query;
     if (!playerId) {
       return res.status(400).json({ error: "playerId is required" });
     }
