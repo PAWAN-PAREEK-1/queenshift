@@ -543,12 +543,14 @@ router.get("/get-transaction", async (req, res) => {
   try {
     await connectDB();
     const { transactionId } = req.body;
-
+    console.log({transactionId});
+    
     const transactions = await transaction.findOne(
       { transactionId },
       { _id: 0, transactionId: 1, time: 1 }
     );
-
+    console.log({transactions});
+    
     if (!transactions) {
       return res.status(404).json({
         message: "transaction not found"
@@ -851,7 +853,7 @@ router.get("/league/rank", async (req, res) => {
     await connectDB();
 
     const { playerId } = req.body;
-
+    console.log("inside leque rank , " , playerId)
     if (!playerId) {
       return res.status(400).json({ error: "playerId is required" });
     }
@@ -885,7 +887,8 @@ router.get("/league/rank", async (req, res) => {
         },
       },
     ]);
-
+    console.log({result});
+    
     if (!result.length) {
       return res.status(404).json({ error: "Player not found" });
     }
