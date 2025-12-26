@@ -71,7 +71,7 @@ router.post("/update", async (req, res) => {
     // find user
     const user = await User.findOne({playerId:userId});
     if (!user) {
-      return res.status(200).json({ message: "User not found" });
+      return res.status(404).json({ message: "User not found" });
     }
      if (typeof username !== "undefined" && username !== user.username) {
       const usernameExists = await User.findOne({ username });
@@ -132,7 +132,7 @@ router.get("/user", async (req, res) => {
 
     if (!user) {
       return res
-        .status(200)
+        .status(404)
         .json({ message: "User not found with this email" });
     }
 
@@ -188,7 +188,7 @@ router.post("/level-complete", async (req, res) => {
     // 2️⃣ Find user
     const user = await User.findOne({ playerId });
     if (!user) {
-      return res.status(200).json({ message: "User not found" });
+      return res.status(404).json({ message: "User not found" });
     }
 
     const progress = user.levels[mode];
@@ -552,7 +552,7 @@ router.get("/get-transaction", async (req, res) => {
     console.log({transactions});
     
     if (!transactions) {
-      return res.status(200).json({
+      return res.status(404).json({
         message: "transaction not found"
       });
     }
@@ -890,7 +890,7 @@ router.get("/league/rank", async (req, res) => {
     console.log({result});
     
     if (!result.length) {
-      return res.status(200).json({ error: "Player not found" });
+      return res.status(404).json({ error: "Player not found" });
     }
 
     return res.json(result[0]);
