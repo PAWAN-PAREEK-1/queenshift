@@ -817,7 +817,7 @@ router.get("/league/leaderboard", async (req, res) => {
         },
       },
 
-      // Sort leagues properly: sılver → diamond, level 1 → 3
+      // Sort leagues properly: silver → diamond, level 1 → 3
       {
         $sort: {
           "league.name": 1,
@@ -1033,6 +1033,63 @@ router.get("/league/rank", async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 });
+
+
+router.get("/league/update", async (req, res) => {
+  try {
+    const cutoff = new Date();
+    cutoff.setUTCHours(4, 30, 0, 0); // 10 AM IST
+
+    // Get players created/updated before cutoff
+    const players = await LeagueProgress.find({
+      $or: [
+        { createdAt: { $lt: cutoff } },
+        { updatedAt: { $lt: cutoff } }
+      ]
+    });
+
+    let updatedCount = 0;
+
+    for (const player of players) {
+      const score = player.score; // 🔴 change if your field name is different
+
+      const leagueData = LEAGUES.find(l =>
+        score >= l.min && score <= l.max
+      );
+
+      if (!leagueData) continue;
+
+      // Update only if league actually changes
+      if (
+        player.league.name !== leagueData.name ||
+        player.league.level !== leagueData.level
+      ) {
+        await LeagueProgress.updateOne(
+          { _id: player._id },
+          {
+            $set: {
+              "league.name": leagueData.name,
+              "league.level": leagueData.level
+            }
+          }
+        );
+        updatedCount++;
+      }
+    }
+
+    res.json({
+      success: true,
+      updated: updatedCount
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 
 
 
