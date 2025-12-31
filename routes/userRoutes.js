@@ -858,35 +858,169 @@ router.get("/league/rank", async (req, res) => {
       return res.status(400).json({ error: "playerId is required" });
     }
 
-    const result = await LeagueProgress.aggregate([
-      { $match: { playerId } },
-
-      // Join user to get username
-      {
-        $lookup: {
-          from: "users",
-          localField: "playerId",
-          foreignField: "playerId",
-          as: "user",
-        },
-      },
-      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
-
-      {
-        $project: {
-          _id: 0,
-          playerId: 1,
-          score: "$total_score",
-          username: { $ifNull: ["$user.username", "Unknown"] },
-          avatar_index: { $ifNull: ["$user.avatar_index", 0] },
-          frame_index: { $ifNull: ["$user.frame_index", 0] },
-          league: {
-            name: "$league.name",
-            level: "$league.level",
-          },
-        },
-      },
-    ]);
+    //  const result = await LeagueProgress.aggregate([
+  
+//       { $match: { playerId } },
+  
+ 
+  
+//       // Join user to get username
+  
+//       {
+  
+//         $lookup: {
+  
+//           from: "users",
+  
+//           localField: "playerId",
+  
+//           foreignField: "playerId",
+  
+//           as: "user",
+  
+//         },
+  
+//       },
+  
+//       { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+  
+ 
+  
+//       {
+  
+//         $project: {
+  
+//           _id: 0,
+  
+//           playerId: 1,
+  
+//           score: "$total_score",
+  
+//           username: { $ifNull: ["$user.username", "Unknown"] },
+  
+//           avatar_index: { $ifNull: ["$user.avatar_index", 0] },
+  
+//           frame_index: { $ifNull: ["$user.frame_index", 0] },
+  
+//           league: {
+  
+//             name: "$league.name",
+  
+//             level: "$league.level",
+  
+//           },
+  
+//         },
+  
+//       },
+  
+//     ]);
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+    const result = await LeagueProgress.aggregate([
+  
+  // 1. Rank all players by score
+  
+  {
+  
+    $setWindowFields: {
+  
+      sortBy: { total_score: -1 },
+  
+      output: {
+  
+        ranknumber: { $rank: {} } // or $denseRank
+  
+      }
+  
+    }
+  
+  },
+  
+ 
+  
+  // 2. Match requested player
+  
+  {
+  
+    $match: { playerId }
+  
+  },
+  
+ 
+  
+  // 3. Join user data
+  
+  {
+  
+    $lookup: {
+  
+      from: "users",
+  
+      localField: "playerId",
+  
+      foreignField: "playerId",
+  
+      as: "user",
+  
+    },
+  
+  },
+  
+  {
+  
+    $unwind: {
+  
+      path: "$user",
+  
+      preserveNullAndEmptyArrays: true,
+  
+    },
+  
+  },
+  
+ 
+  
+  // 4. Final response shape
+  
+  {
+  
+    $project: {
+  
+      _id: 0,
+  
+      playerId: 1,
+  
+      score: "$total_score",
+  
+      ranknumber: 1,
+  
+      username: { $ifNull: ["$user.username", "Unknown"] },
+  
+      avatar_index: { $ifNull: ["$user.avatar_index", 0] },
+  
+      frame_index: { $ifNull: ["$user.frame_index", 0] },
+  
+      league: {
+  
+        name: "$league.name",
+  
+        level: "$league.level",
+  
+      },
+  
+    },
+  
+  },
+  
+]);
     console.log({result});
     
     if (!result.length) {
