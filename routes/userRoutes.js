@@ -508,37 +508,42 @@ router.post("/bulk-signup", async (req, res) => {
 router.post("/transaction", async (req, res) => {
   try {
     await connectDB();
-    const { transactionId } = req.body;
-    const time = Date.now()
 
-    if (!transactionId || !time) {
+    const { transactionId, productId } = req.body;
+    const time = Date.now();
+
+    if (!transactionId) {
       return res.status(400).json({
-        message: "transactionId and time are required"
+        message: "transactionId is required"
       });
     }
 
-    const transactions = await transaction.create({
-      transactionId,
-      time
-    });
+    const transactionData = await transaction.findOneAndUpdate(
+      { transactionId },               // 🔍 check by transactionId
+      {
+        $set: {
+          productId,
+          time
+        }
+      },
+      {
+        new: true,                      // return updated document
+        upsert: true                    // create if not exists
+      }
+    );
 
-    res.status(201).json({
-      message: "transaction stored successfully",
-      data: transactions
+    res.status(200).json({
+      message: "transaction created or updated successfully",
+      data: transactionData
     });
 
   } catch (err) {
-    if (err.code === 11000) {
-      return res.status(409).json({
-        message: "transaction already exists"
-      });
-    }
-
     res.status(500).json({
       error: err.message
     });
   }
 });
+
 
 router.get("/get-transaction", async (req, res) => {
   try {
@@ -548,9 +553,8 @@ router.get("/get-transaction", async (req, res) => {
 
     const transactions = await transaction.find(
       { transactionId },
-      { _id: 0, transactionId: 1, time: 1 }
+      { _id: 0, transactionId: 1, time: 1, productId:1 }
     );
-    console.log({ transactions });
 
     if (!transactions) {
       return res.status(404).json({
@@ -560,6 +564,7 @@ router.get("/get-transaction", async (req, res) => {
 
     res.json({
       transactionId: transactions.transactionId,
+      productId:transactions.productId,
       time: transactions.time
     });
 

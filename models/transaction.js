@@ -7,6 +7,10 @@ const transactionSchema = new mongoose.Schema(
       required: true,
       unique: true
     },
+    productId: {
+      type: String,
+      required: true,
+    },
     time: {
       type: String,
       required: true
