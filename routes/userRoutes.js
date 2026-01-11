@@ -546,7 +546,7 @@ router.get("/get-transaction", async (req, res) => {
     const { transactionId } = req.query;
     console.log({ transactionId });
 
-    const transactions = await transaction.findOne(
+    const transactions = await transaction.find(
       { transactionId },
       { _id: 0, transactionId: 1, time: 1 }
     );
