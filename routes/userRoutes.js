@@ -11,7 +11,7 @@ const router = express.Router();
 
 
 
-export function calculateLeague(score) { const match = LEAGUES.find( l => score >= l.min && score <= l.max ); return match || { name: "bronze", level: 3 }; }
+export function calculateLeague(score) { const match = LEAGUES.find(l => score >= l.min && score <= l.max); return match || { name: "bronze", level: 3 }; }
 
 // ----------------------
 // Signup Route
@@ -21,7 +21,7 @@ router.post("/signup", async (req, res) => {
     await connectDB();
     const { username, avatar_index, frame_index, email } = req.body;
 
-   if (!username) {
+    if (!username) {
       return res.status(400).json({
         message: "username is required"
       });
@@ -49,7 +49,7 @@ router.post("/signup", async (req, res) => {
     const user = new User({ username, frame_index, avatar_index, playerId, email });
     await user.save();
 
-    res.json({ message: "Signup successful", username: user.username, frame_index:user.frame_index, avatar_index:user.avatar_index, playerId:user.playerId, email:user.email  });
+    res.json({ message: "Signup successful", username: user.username, frame_index: user.frame_index, avatar_index: user.avatar_index, playerId: user.playerId, email: user.email });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -69,11 +69,11 @@ router.post("/update", async (req, res) => {
     }
 
     // find user
-    const user = await User.findOne({playerId:userId});
+    const user = await User.findOne({ playerId: userId });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-     if (typeof username !== "undefined" && username !== user.username) {
+    if (typeof username !== "undefined" && username !== user.username) {
       const usernameExists = await User.findOne({ username });
       if (usernameExists) {
         return res.status(409).json({ message: "Username already exists" });
@@ -88,7 +88,7 @@ router.post("/update", async (req, res) => {
 
     await user.save(); // no { new: true } needed
 
-        res.json({ message: "Profile Update", username: user.username, frame_index:user.frame_index, avatar_index:user.avatar_index, playerId:user.playerId, email:user.email  });
+    res.json({ message: "Profile Update", username: user.username, frame_index: user.frame_index, avatar_index: user.avatar_index, playerId: user.playerId, email: user.email });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -107,23 +107,23 @@ router.get("/user", async (req, res) => {
   await connectDB();
 
   if (!email) {
-      return res.status(400).json({ message: "email is required" });
+    return res.status(400).json({ message: "email is required" });
   }
 
   try {
     const projection = {
-        // Include fields
-        username: 1,
-        avatar_index: 1,
-        frame_index: 1,
-        playerId: 1,
-        // Include specific nested fields
-        'levels.easy.current_level': 1,
-        'levels.medium.current_level': 1,
-        'levels.hard.current_level': 1,
-        'levels.expert.current_level': 1,
-        // Exclude fields (Mongoose includes _id by default unless you explicitly exclude it)
-        // We will keep the main _id for potential client use.
+      // Include fields
+      username: 1,
+      avatar_index: 1,
+      frame_index: 1,
+      playerId: 1,
+      // Include specific nested fields
+      'levels.easy.current_level': 1,
+      'levels.medium.current_level': 1,
+      'levels.hard.current_level': 1,
+      'levels.expert.current_level': 1,
+      // Exclude fields (Mongoose includes _id by default unless you explicitly exclude it)
+      // We will keep the main _id for potential client use.
     };
 
     const user = await User.findOne({ email })
@@ -138,18 +138,18 @@ router.get("/user", async (req, res) => {
 
     // --- Optional: Re-structure the levels object for a flatter response (cleaner client use) ---
     const formattedUser = {
-        _id: user._id,
-        username: user.username,
-        avatar_index: user.avatar_index,
-        frame_index: user.frame_index,
-        playerId: user.playerId,
-        email: user.email
-        // current_levels: {
-        //     easy: user.levels.easy?.current_level || 0,
-        //     medium: user.levels.medium?.current_level || 0,
-        //     hard: user.levels.hard?.current_level || 0,
-        //     expert: user.levels.expert?.current_level || 0,
-        // }
+      _id: user._id,
+      username: user.username,
+      avatar_index: user.avatar_index,
+      frame_index: user.frame_index,
+      playerId: user.playerId,
+      email: user.email
+      // current_levels: {
+      //     easy: user.levels.easy?.current_level || 0,
+      //     medium: user.levels.medium?.current_level || 0,
+      //     hard: user.levels.hard?.current_level || 0,
+      //     expert: user.levels.expert?.current_level || 0,
+      // }
     };
 
     return res.status(200).json({ user: formattedUser });
@@ -339,8 +339,8 @@ router.post("/leader", async (req, res) => {
 
 router.post("/user-rank", async (req, res) => {
   try {
-     await connectDB();
-       console.error("📱 User-Agent:", req.headers["user-agent"]);
+    await connectDB();
+    console.error("📱 User-Agent:", req.headers["user-agent"]);
     console.error("🌐 Origin:", req.headers.origin);
     console.error("🧾 Query:", req.query);
     const { playerId, mode, level } = req.body;
@@ -369,14 +369,14 @@ router.post("/user-rank", async (req, res) => {
     // 🔥 FIX: Correctly access the deeply nested time value on the Mongoose Document
     // levels[mode] is a subdocument (standard object access)
     // .level_times is a Map (use .get(key) access)
-    const userTime = user.levels?.[mode]?.level_times?.get(levelStr); 
+    const userTime = user.levels?.[mode]?.level_times?.get(levelStr);
     // The optional chaining (?. ) helps prevent crashes if the mode subdocument doesn't exist.
 
     if (userTime === undefined || userTime === 0) {
-       console.error("data not found user rank hited ");
+      console.error("data not found user rank hited ");
       return res.status(200).json({
-       
-        
+
+
         message: `data not found ${userTime} `,
       });
     }
@@ -406,12 +406,12 @@ router.post("/user-rank", async (req, res) => {
     // The final rank is (count of better users) + 1 (the user themselves)
     const rankAbove = betterUsersCount.length > 0 ? betterUsersCount[0].count : 0;
     const userRank = rankAbove + 1;
-    
+
     // --- 4. Get total players who completed the level (Optional, but useful for context) ---
     const totalPlayers = await User.countDocuments({
       [userLevelTimePath]: { $gt: 0 },
     });
-    console.error("user rank completed ", {playerId, mode, level})
+    console.error("user rank completed ", { playerId, mode, level })
     // --- 5. Return Response ---
     res.json({
       username: user.username,
@@ -442,7 +442,7 @@ router.post("/bulk-signup", async (req, res) => {
     const skippedUsers = [];
 
     for (const user of users) {
-      const { username, avatar_index, frame_index, email ,playerId} = user;
+      const { username, avatar_index, frame_index, email, playerId } = user;
 
       if (!username) {
         skippedUsers.push({
@@ -544,14 +544,14 @@ router.get("/get-transaction", async (req, res) => {
   try {
     await connectDB();
     const { transactionId } = req.query;
-    console.log({transactionId});
-    
+    console.log({ transactionId });
+
     const transactions = await transaction.findOne(
       { transactionId },
       { _id: 0, transactionId: 1, time: 1 }
     );
-    console.log({transactions});
-    
+    console.log({ transactions });
+
     if (!transactions) {
       return res.status(404).json({
         message: "transaction not found"
@@ -754,18 +754,18 @@ router.post("/league/score-update", async (req, res) => {
 
 
 router.get("/league/leaderboard", async (req, res) => {
-    console.error( "in leader board   ");
+  console.error("in leader board   ");
 
   const startTime = Date.now();
   try {
     await connectDB();
 
-   // const limit = Math.max(1, Number(req.query.limit) || 3);
+    // const limit = Math.max(1, Number(req.query.limit) || 3);
     const limit = 50;
 
-        console.log("📊 Aggregation started");
+    console.log("📊 Aggregation started");
 
-    console.error({limit}, "dgdgdfgddg");
+    console.error({ limit }, "dgdgdfgddg");
     console.error("🚀 /league/leaderboard called");
     console.error("📱 User-Agent:", req.headers["user-agent"]);
     console.error("🌐 Origin:", req.headers.origin);
@@ -818,7 +818,7 @@ router.get("/league/leaderboard", async (req, res) => {
         },
       },
 
-      // Sort leagues properly: gold → diamond, level 1 → 3
+      // Sort leagues properly: silver → diamond, level 1 → 3
       {
         $sort: {
           "league.name": 1,
@@ -827,12 +827,12 @@ router.get("/league/leaderboard", async (req, res) => {
       },
     ]);
 
-        console.error("✅ Aggregation finished");
+    console.error("✅ Aggregation finished");
     console.error("📦 Leaderboard count:", leaderboard?.length);
 
     // 5️⃣ Response time
     console.error("⏱ Response time:", Date.now() - startTime, "ms");
-    
+
 
     return res.json({ leaderboard });
   } catch (err) {
@@ -852,44 +852,178 @@ router.get("/league/leaderboard", async (req, res) => {
 router.get("/league/rank", async (req, res) => {
   try {
     await connectDB();
-    console.log("inside leque rank , " , req.body, req.query)
+    console.log("inside leque rank , ", req.body, req.query)
 
     const { playerId } = req.query;
     if (!playerId) {
       return res.status(400).json({ error: "playerId is required" });
     }
 
+    //  const result = await LeagueProgress.aggregate([
+
+    //       { $match: { playerId } },
+
+
+
+    //       // Join user to get username
+
+    //       {
+
+    //         $lookup: {
+
+    //           from: "users",
+
+    //           localField: "playerId",
+
+    //           foreignField: "playerId",
+
+    //           as: "user",
+
+    //         },
+
+    //       },
+
+    //       { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+
+
+
+    //       {
+
+    //         $project: {
+
+    //           _id: 0,
+
+    //           playerId: 1,
+
+    //           score: "$total_score",
+
+    //           username: { $ifNull: ["$user.username", "Unknown"] },
+
+    //           avatar_index: { $ifNull: ["$user.avatar_index", 0] },
+
+    //           frame_index: { $ifNull: ["$user.frame_index", 0] },
+
+    //           league: {
+
+    //             name: "$league.name",
+
+    //             level: "$league.level",
+
+    //           },
+
+    //         },
+
+    //       },
+
+    //     ]);
+
+
+
+
+
+
+
+
+
     const result = await LeagueProgress.aggregate([
-      { $match: { playerId } },
 
-      // Join user to get username
+      // 1. Rank all players by score
+
       {
+
+        $setWindowFields: {
+
+          sortBy: { total_score: -1 },
+
+          output: {
+
+            ranknumber: { $rank: {} } // or $denseRank
+
+          }
+
+        }
+
+      },
+
+
+
+      // 2. Match requested player
+
+      {
+
+        $match: { playerId }
+
+      },
+
+
+
+      // 3. Join user data
+
+      {
+
         $lookup: {
+
           from: "users",
+
           localField: "playerId",
+
           foreignField: "playerId",
+
           as: "user",
+
         },
+
       },
-      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
 
       {
-        $project: {
-          _id: 0,
-          playerId: 1,
-          score: "$total_score",
-          username: { $ifNull: ["$user.username", "Unknown"] },
-          avatar_index: { $ifNull: ["$user.avatar_index", 0] },
-          frame_index: { $ifNull: ["$user.frame_index", 0] },
-          league: {
-            name: "$league.name",
-            level: "$league.level",
-          },
+
+        $unwind: {
+
+          path: "$user",
+
+          preserveNullAndEmptyArrays: true,
+
         },
+
       },
+
+
+
+      // 4. Final response shape
+
+      {
+
+        $project: {
+
+          _id: 0,
+
+          playerId: 1,
+
+          score: "$total_score",
+
+          ranknumber: 1,
+
+          username: { $ifNull: ["$user.username", "Unknown"] },
+
+          avatar_index: { $ifNull: ["$user.avatar_index", 0] },
+
+          frame_index: { $ifNull: ["$user.frame_index", 0] },
+
+          league: {
+
+            name: "$league.name",
+
+            level: "$league.level",
+
+          },
+
+        },
+
+      },
+
     ]);
-    console.log({result});
-    
+    console.log({ result });
+
     if (!result.length) {
       return res.status(404).json({ error: "Player not found" });
     }
@@ -900,6 +1034,63 @@ router.get("/league/rank", async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 });
+
+
+router.get("/league/update", async (req, res) => {
+  try {
+    const cutoff = new Date();
+    cutoff.setUTCHours(4, 30, 0, 0); // 10 AM IST
+
+    // Get players created/updated before cutoff
+    const players = await LeagueProgress.find({
+      $or: [
+        { createdAt: { $lt: cutoff } },
+        { updatedAt: { $lt: cutoff } }
+      ]
+    });
+
+    let updatedCount = 0;
+
+    for (const player of players) {
+      const score = player.score; // 🔴 change if your field name is different
+
+      const leagueData = LEAGUES.find(l =>
+        score >= l.min && score <= l.max
+      );
+
+      if (!leagueData) continue;
+
+      // Update only if league actually changes
+      if (
+        player.league.name !== leagueData.name ||
+        player.league.level !== leagueData.level
+      ) {
+        await LeagueProgress.updateOne(
+          { _id: player._id },
+          {
+            $set: {
+              "league.name": leagueData.name,
+              "league.level": leagueData.level
+            }
+          }
+        );
+        updatedCount++;
+      }
+    }
+
+    res.json({
+      success: true,
+      updated: updatedCount
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 
 
 
