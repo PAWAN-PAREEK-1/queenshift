@@ -508,7 +508,8 @@ router.post("/bulk-signup", async (req, res) => {
 router.post("/transaction", async (req, res) => {
   try {
     await connectDB();
-    const { transactionId, time } = req.body;
+    const { transactionId } = req.body;
+    const time = Date.now()
 
     if (!transactionId || !time) {
       return res.status(400).json({
