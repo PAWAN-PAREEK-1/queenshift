@@ -281,38 +281,66 @@ router.post("/leader", async (req, res) => {
     const sortDirection = { time_taken: sortOrder };
 
     // --- Aggregation Pipeline ---
-    const pipeline = [
-      // 1. Filter out users who haven't completed the requested level in the mode
-      {
-        $match: {
-          [`levels.${mode}.level_times.${levelStr}`]: { $gt: 0 } // Check for time > 0 for the specific level
-        }
-      },
-      // 2. Add a computed field to easily access the time taken for the specific level
-      {
-        $addFields: {
-          time_taken: `$levels.${mode}.level_times.${levelStr}`
-        }
-      },
-      // 3. Sort the results based on the time taken
-      {
-        $sort: sortDirection // Sorts by 'time_taken'
-      },
-      // 4. Limit the number of documents
-      {
-        $limit: leaderboardLimit
-      },
-      // 5. Project (select) the final fields to send back to the client
-      {
-        $project: {
-          _id: 0,
-          username: 1,
-          avatar_index: 1,
-          frame_index: 1,
-          time_taken: 1 // The specific level time
-        }
+   const pipeline = [
+  // 1. Match users who completed the level
+  {
+    $match: {
+      [`levels.${mode}.level_times.${levelStr}`]: { $gt: 0 }
+    }
+  },
+
+  // 2. Extract level time
+  {
+    $addFields: {
+      time_taken: `$levels.${mode}.level_times.${levelStr}`
+    }
+  },
+
+  // 3. Join LeagueProgress
+  {
+    $lookup: {
+      from: "leagueprogresses",   // 👈 adjust if needed
+      localField: "playerId",
+      foreignField: "playerId",
+      as: "leagueData"
+    }
+  },
+
+  // 4. Unwind league data
+  {
+    $unwind: {
+      path: "$leagueData",
+      preserveNullAndEmptyArrays: true
+    }
+  },
+
+  // 5. Sort leaderboard
+  {
+    $sort: sortDirection
+  },
+
+  // 6. Limit
+  {
+    $limit: leaderboardLimit
+  },
+
+  // 7. Final projection
+  {
+    $project: {
+      _id: 0,
+      username: 1,
+      avatar_index: 1,
+      frame_index: 1,
+      time_taken: 1,
+
+      // ✅ League info added
+      league: {
+        name: { $ifNull: ["$leagueData.league.name", "bronze"] },
+        level: { $ifNull: ["$leagueData.league.level", 3] }
       }
-    ];
+    }
+  }
+];
 
     const leaderboard = await User.aggregate(pipeline);
 
@@ -322,7 +350,12 @@ router.post("/leader", async (req, res) => {
       avatar_index: user.avatar_index,
       frame_index: user.frame_index,
       // Renamed from average_time to level_time for clarity
-      level_time: user.time_taken
+      level_time: user.time_taken,
+      league: {
+    name: user.league?.name ?? null,
+    level: user.league?.level ?? null
+  }
+
     }));
 
     res.json(formattedUsers);
@@ -1025,6 +1058,7 @@ router.get("/league/rank", async (req, res) => {
       },
 
     ]);
+
     console.log({ result });
 
     if (!result.length) {
