@@ -551,10 +551,12 @@ router.get("/get-transaction", async (req, res) => {
     const { transactionId } = req.query;
     console.log({ transactionId });
 
-    const transactions = await transaction.find(
+    const transactions = await transaction.findOne(
       { transactionId },
       { _id: 0, transactionId: 1, time: 1, productId:1 }
     );
+    console.log({ transactions });
+
 
     if (!transactions) {
       return res.status(404).json({
@@ -562,11 +564,7 @@ router.get("/get-transaction", async (req, res) => {
       });
     }
 
-    res.json({
-      transactionId: transactions.transactionId,
-      productId:transactions.productId,
-      time: transactions.time
-    });
+    res.status(200).json(transactions );
 
   } catch (err) {
     res.status(500).json({
