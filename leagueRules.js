@@ -14,3 +14,5 @@ export const LEAGUES = [
   { name: "diamond", level: 1, min: 11700, max: Infinity },
 
 ];
+
+
