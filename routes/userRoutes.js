@@ -9,9 +9,10 @@ import LeagueProgress from "../models/LeagueProgress.js";
 import { log } from "console";
 const router = express.Router();
 
-
-
-export function calculateLeague(score) { const match = LEAGUES.find(l => score >= l.min && score <= l.max); return match || { name: "bronze", level: 3 }; }
+export function calculateLeague(score) {
+  const match = LEAGUES.find((l) => score >= l.min && score <= l.max);
+  return match || { name: "bronze", level: 3 };
+}
 
 // ----------------------
 // Signup Route
@@ -23,7 +24,7 @@ router.post("/signup", async (req, res) => {
 
     if (!username) {
       return res.status(400).json({
-        message: "username is required"
+        message: "username is required",
       });
     }
 
@@ -35,22 +36,34 @@ router.post("/signup", async (req, res) => {
     }
 
     const isExist = await User.findOne({
-      $or: orConditions
+      $or: orConditions,
     });
 
     if (isExist) {
       return res.status(400).json({
-        message: "Username  already exists"
+        message: "Username  already exists",
       });
     }
 
     const playerId = crypto.randomBytes(16).toString("hex");
 
-    const user = new User({ username, frame_index, avatar_index, playerId, email });
+    const user = new User({
+      username,
+      frame_index,
+      avatar_index,
+      playerId,
+      email,
+    });
     await user.save();
 
-    res.json({ message: "Signup successful", username: user.username, frame_index: user.frame_index, avatar_index: user.avatar_index, playerId: user.playerId, email: user.email });
-
+    res.json({
+      message: "Signup successful",
+      username: user.username,
+      frame_index: user.frame_index,
+      avatar_index: user.avatar_index,
+      playerId: user.playerId,
+      email: user.email,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -63,7 +76,7 @@ router.post("/update", async (req, res) => {
   try {
     await connectDB();
     const { playerId, username, avatar_index, frame_index } = req.body;
-    const userId = playerId
+    const userId = playerId;
     if (!userId) {
       return res.status(400).json({ message: "userId is required" });
     }
@@ -82,14 +95,21 @@ router.post("/update", async (req, res) => {
     }
 
     // Update fields ONLY if provided (even if value === 0)
-    if (typeof username !== "undefined" && user.username != username) user.username = username;
+    if (typeof username !== "undefined" && user.username != username)
+      user.username = username;
     if (typeof avatar_index !== "undefined") user.avatar_index = avatar_index;
     if (typeof frame_index !== "undefined") user.frame_index = frame_index;
 
     await user.save(); // no { new: true } needed
 
-    res.json({ message: "Profile Update", username: user.username, frame_index: user.frame_index, avatar_index: user.avatar_index, playerId: user.playerId, email: user.email });
-
+    res.json({
+      message: "Profile Update",
+      username: user.username,
+      frame_index: user.frame_index,
+      avatar_index: user.avatar_index,
+      playerId: user.playerId,
+      email: user.email,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -118,10 +138,10 @@ router.get("/user", async (req, res) => {
       frame_index: 1,
       playerId: 1,
       // Include specific nested fields
-      'levels.easy.current_level': 1,
-      'levels.medium.current_level': 1,
-      'levels.hard.current_level': 1,
-      'levels.expert.current_level': 1,
+      "levels.easy.current_level": 1,
+      "levels.medium.current_level": 1,
+      "levels.hard.current_level": 1,
+      "levels.expert.current_level": 1,
       // Exclude fields (Mongoose includes _id by default unless you explicitly exclude it)
       // We will keep the main _id for potential client use.
     };
@@ -143,7 +163,7 @@ router.get("/user", async (req, res) => {
       avatar_index: user.avatar_index,
       frame_index: user.frame_index,
       playerId: user.playerId,
-      email: user.email
+      email: user.email,
       // current_levels: {
       //     easy: user.levels.easy?.current_level || 0,
       //     medium: user.levels.medium?.current_level || 0,
@@ -153,10 +173,11 @@ router.get("/user", async (req, res) => {
     };
 
     return res.status(200).json({ user: formattedUser });
-
   } catch (err) {
     console.log("Error fetching user data:", err);
-    res.status(500).json({ error: "Server error while retrieving user data", err });
+    res
+      .status(500)
+      .json({ error: "Server error while retrieving user data", err });
   }
 });
 
@@ -221,7 +242,7 @@ router.post("/level-complete", async (req, res) => {
         $inc: { total_time: timeTaken, attempts: 1 },
         $setOnInsert: { mode, level: requestedLevel },
       },
-      { upsert: true }
+      { upsert: true },
     );
 
     // 7️⃣ OPTION A: Calculate GLOBAL AVERAGE FROM USERS (same as Mongo shell)
@@ -241,15 +262,13 @@ router.post("/level-complete", async (req, res) => {
       },
     ]);
 
-    const globalAverage =
-      avgResult.length > 0 ? avgResult[0].averageTime : 0;
+    const globalAverage = avgResult.length > 0 ? avgResult[0].averageTime : 0;
 
     // 8️⃣ Response
     return res.json({
       message: "Level completed and progress updated!",
       average: globalAverage,
     });
-
   } catch (err) {
     console.log("Error in /level-complete:", err);
     return res.status(500).json({
@@ -257,7 +276,6 @@ router.post("/level-complete", async (req, res) => {
     });
   }
 });
-
 
 // Assume 'User' model is imported and 'router' is an Express router
 
@@ -271,7 +289,11 @@ router.post("/leader", async (req, res) => {
     //   return res.status(400).json({ message: "Invalid mode provided" });
     // }
     if (level === undefined || isNaN(parseInt(level, 10))) {
-      return res.status(400).json({ message: "Level number is required and must be a valid number" });
+      return res
+        .status(400)
+        .json({
+          message: "Level number is required and must be a valid number",
+        });
     }
     const levelStr = String(level); // Map keys are stored as strings
 
@@ -281,94 +303,90 @@ router.post("/leader", async (req, res) => {
     const sortDirection = { time_taken: sortOrder };
 
     // --- Aggregation Pipeline ---
-   const pipeline = [
-  // 1. Match users who completed the level
-  {
-    $match: {
-      [`levels.${mode}.level_times.${levelStr}`]: { $gt: 0 }
-    }
-  },
+    const pipeline = [
+      // 1. Match users who completed the level
+      {
+        $match: {
+          [`levels.${mode}.level_times.${levelStr}`]: { $gt: 0 },
+        },
+      },
 
-  // 2. Extract level time
-  {
-    $addFields: {
-      time_taken: `$levels.${mode}.level_times.${levelStr}`
-    }
-  },
+      // 2. Extract level time
+      {
+        $addFields: {
+          time_taken: `$levels.${mode}.level_times.${levelStr}`,
+        },
+      },
 
-  // 3. Join LeagueProgress
-  {
-    $lookup: {
-      from: "leagueprogresses",   // 👈 adjust if needed
-      localField: "playerId",
-      foreignField: "playerId",
-      as: "leagueData"
-    }
-  },
+      // 3. Join LeagueProgress
+      {
+        $lookup: {
+          from: "leagueprogresses", // 👈 adjust if needed
+          localField: "playerId",
+          foreignField: "playerId",
+          as: "leagueData",
+        },
+      },
 
-  // 4. Unwind league data
-  {
-    $unwind: {
-      path: "$leagueData",
-      preserveNullAndEmptyArrays: true
-    }
-  },
+      // 4. Unwind league data
+      {
+        $unwind: {
+          path: "$leagueData",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
 
-  // 5. Sort leaderboard
-  {
-    $sort: sortDirection
-  },
+      // 5. Sort leaderboard
+      {
+        $sort: sortDirection,
+      },
 
-  // 6. Limit
-  {
-    $limit: leaderboardLimit
-  },
+      // 6. Limit
+      {
+        $limit: leaderboardLimit,
+      },
 
-  // 7. Final projection
-  {
-    $project: {
-      _id: 0,
-      username: 1,
-      avatar_index: 1,
-      frame_index: 1,
-      time_taken: 1,
+      // 7. Final projection
+      {
+        $project: {
+          _id: 0,
+          username: 1,
+          avatar_index: 1,
+          frame_index: 1,
+          time_taken: 1,
 
-      // ✅ League info added
-      league: {
-        name: { $ifNull: ["$leagueData.league.name", "bronze"] },
-        level: { $ifNull: ["$leagueData.league.level", 3] }
-      }
-    }
-  }
-];
+          // ✅ League info added
+          league: {
+            name: { $ifNull: ["$leagueData.league.name", "bronze"] },
+            level: { $ifNull: ["$leagueData.league.level", 3] },
+          },
+        },
+      },
+    ];
 
     const leaderboard = await User.aggregate(pipeline);
 
     // --- Re-format the output for the client ---
-    const formattedUsers = leaderboard.map(user => ({
+    const formattedUsers = leaderboard.map((user) => ({
       username: user.username,
       avatar_index: user.avatar_index,
       frame_index: user.frame_index,
       // Renamed from average_time to level_time for clarity
       level_time: user.time_taken,
       league: {
-    name: user.league?.name ?? null,
-    level: user.league?.level ?? null
-  }
-
+        name: user.league?.name ?? null,
+        level: user.league?.level ?? null,
+      },
     }));
 
     res.json(formattedUsers);
-
   } catch (err) {
     console.log("Error in /leader:", err);
-    res.status(500).json({ error: "Server error during leaderboard retrieval" });
+    res
+      .status(500)
+      .json({ error: "Server error during leaderboard retrieval" });
   }
 });
-
-
-
-
 
 router.post("/user-rank", async (req, res) => {
   try {
@@ -379,9 +397,15 @@ router.post("/user-rank", async (req, res) => {
     const { playerId, mode, level } = req.body;
 
     // --- 1. Input Validation ---
-    if (!playerId || !mode || level === undefined || isNaN(parseInt(level, 10))) {
+    if (
+      !playerId ||
+      !mode ||
+      level === undefined ||
+      isNaN(parseInt(level, 10))
+    ) {
       return res.status(400).json({
-        message: "Missing required fields: playerId, mode, and a valid level number",
+        message:
+          "Missing required fields: playerId, mode, and a valid level number",
       });
     }
 
@@ -392,7 +416,7 @@ router.post("/user-rank", async (req, res) => {
     // --- 2. Find the current user's time ---
     const user = await User.findOne(
       { playerId },
-      { [userLevelTimePath]: 1, username: 1 } // Only fetch the required time and username
+      { [userLevelTimePath]: 1, username: 1 }, // Only fetch the required time and username
     );
 
     if (!user) {
@@ -408,8 +432,6 @@ router.post("/user-rank", async (req, res) => {
     if (userTime === undefined || userTime === 0) {
       console.error("data not found user rank hited ");
       return res.status(200).json({
-
-
         message: `data not found ${userTime} `,
       });
     }
@@ -437,14 +459,15 @@ router.post("/user-rank", async (req, res) => {
     ]);
 
     // The final rank is (count of better users) + 1 (the user themselves)
-    const rankAbove = betterUsersCount.length > 0 ? betterUsersCount[0].count : 0;
+    const rankAbove =
+      betterUsersCount.length > 0 ? betterUsersCount[0].count : 0;
     const userRank = rankAbove + 1;
 
     // --- 4. Get total players who completed the level (Optional, but useful for context) ---
     const totalPlayers = await User.countDocuments({
       [userLevelTimePath]: { $gt: 0 },
     });
-    console.error("user rank completed ", { playerId, mode, level })
+    console.error("user rank completed ", { playerId, mode, level });
     // --- 5. Return Response ---
     res.json({
       username: user.username,
@@ -452,13 +475,11 @@ router.post("/user-rank", async (req, res) => {
       rank: userRank,
       time: userTime,
     });
-
   } catch (err) {
     console.log("Error in /user-rank:", err);
     res.status(500).json({ error: "Server error during rank retrieval" });
   }
 });
-
 
 router.post("/bulk-signup", async (req, res) => {
   try {
@@ -467,7 +488,7 @@ router.post("/bulk-signup", async (req, res) => {
 
     if (!Array.isArray(users) || users.length === 0) {
       return res.status(400).json({
-        message: "users array is required"
+        message: "users array is required",
       });
     }
 
@@ -480,7 +501,7 @@ router.post("/bulk-signup", async (req, res) => {
       if (!username) {
         skippedUsers.push({
           user,
-          reason: "Username missing"
+          reason: "Username missing",
         });
         continue;
       }
@@ -490,7 +511,7 @@ router.post("/bulk-signup", async (req, res) => {
         username,
         avatar_index: avatar_index ?? 0,
         frame_index: frame_index ?? 0,
-        playerId: playerId ?? crypto.randomBytes(16).toString("hex")
+        playerId: playerId ?? crypto.randomBytes(16).toString("hex"),
       };
 
       // ONLY add email if provided
@@ -500,15 +521,15 @@ router.post("/bulk-signup", async (req, res) => {
 
       operations.push({
         insertOne: {
-          document: userDoc
-        }
+          document: userDoc,
+        },
       });
     }
 
     if (operations.length === 0) {
       return res.status(400).json({
         message: "No valid users to insert",
-        skippedUsers
+        skippedUsers,
       });
     }
 
@@ -527,16 +548,14 @@ router.post("/bulk-signup", async (req, res) => {
       message: "Bulk signup completed",
       insertedCount: result?.insertedCount || 0,
       skippedCount: skippedUsers.length,
-      skippedUsers
+      skippedUsers,
     });
-
   } catch (err) {
     res.status(500).json({
-      error: err.message
+      error: err.message,
     });
   }
 });
-
 
 router.post("/transaction", async (req, res) => {
   try {
@@ -547,36 +566,34 @@ router.post("/transaction", async (req, res) => {
 
     if (!transactionId) {
       return res.status(400).json({
-        message: "transactionId is required"
+        message: "transactionId is required",
       });
     }
 
     const transactionData = await transaction.findOneAndUpdate(
-      { transactionId },               // 🔍 check by transactionId
+      { transactionId }, // 🔍 check by transactionId
       {
         $set: {
           productId,
-          time
-        }
+          time,
+        },
       },
       {
-        new: true,                      // return updated document
-        upsert: true                    // create if not exists
-      }
+        new: true, // return updated document
+        upsert: true, // create if not exists
+      },
     );
 
     res.status(200).json({
       message: "transaction created or updated successfully",
-      data: transactionData
+      data: transactionData,
     });
-
   } catch (err) {
     res.status(500).json({
-      error: err.message
+      error: err.message,
     });
   }
 });
-
 
 router.get("/get-transaction", async (req, res) => {
   try {
@@ -586,22 +603,20 @@ router.get("/get-transaction", async (req, res) => {
 
     const transactions = await transaction.findOne(
       { transactionId },
-      { _id: 0, transactionId: 1, time: 1, productId:1 }
+      { _id: 0, transactionId: 1, time: 1, productId: 1 },
     );
     console.log({ transactions });
 
-
     if (!transactions) {
       return res.status(404).json({
-        message: "transaction not found"
+        message: "transaction not found",
       });
     }
 
-    res.status(200).json(transactions );
-
+    res.status(200).json(transactions);
   } catch (err) {
     res.status(500).json({
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -614,7 +629,7 @@ router.post("/bulk-level-complete", async (req, res) => {
 
     if (!Array.isArray(records) || records.length === 0) {
       return res.status(400).json({
-        message: "records array is required"
+        message: "records array is required",
       });
     }
 
@@ -625,11 +640,11 @@ router.post("/bulk-level-complete", async (req, res) => {
     //   });
     // }
 
-    const playerIds = records.map(r => r.playerId);
+    const playerIds = records.map((r) => r.playerId);
 
     // 1️⃣ Fetch all users in ONE query
     const users = await User.find({ playerId: { $in: playerIds } });
-    const userMap = new Map(users.map(u => [u.playerId, u]));
+    const userMap = new Map(users.map((u) => [u.playerId, u]));
 
     const userOps = [];
     const levelOpsMap = new Map(); // key = mode_level
@@ -660,10 +675,7 @@ router.post("/bulk-level-complete", async (req, res) => {
 
       // ---- User Progress Update ----
       progress.level_times.set(requestedLevel.toString(), timeTaken);
-      progress.current_level = Math.max(
-        progress.current_level,
-        requestedLevel
-      );
+      progress.current_level = Math.max(progress.current_level, requestedLevel);
 
       const times = [...progress.level_times.values()];
       const totalTime = times.reduce((a, b) => a + b, 0);
@@ -674,10 +686,10 @@ router.post("/bulk-level-complete", async (req, res) => {
           filter: { _id: user._id },
           update: {
             $set: {
-              [`levels.${mode}`]: progress
-            }
-          }
-        }
+              [`levels.${mode}`]: progress,
+            },
+          },
+        },
       });
 
       // ---- Global Level Stats (grouped) ----
@@ -688,7 +700,7 @@ router.post("/bulk-level-complete", async (req, res) => {
           mode,
           level: requestedLevel,
           total_time: 0,
-          attempts: 0
+          attempts: 0,
         });
       }
 
@@ -712,15 +724,15 @@ router.post("/bulk-level-complete", async (req, res) => {
           update: {
             $inc: {
               total_time: entry.total_time,
-              attempts: entry.attempts
+              attempts: entry.attempts,
             },
             $setOnInsert: {
               mode: entry.mode,
-              level: entry.level
-            }
+              level: entry.level,
+            },
           },
-          upsert: true
-        }
+          upsert: true,
+        },
       });
     }
 
@@ -732,17 +744,15 @@ router.post("/bulk-level-complete", async (req, res) => {
       message: "Bulk level completion processed",
       processed: records.length,
       skippedCount: skipped.length,
-      skipped
+      skipped,
     });
-
   } catch (err) {
     console.log("Bulk level error:", err);
     res.status(500).json({
-      error: "Server error during bulk level completion"
+      error: "Server error during bulk level completion",
     });
   }
 });
-
 
 router.post("/league/score-update", async (req, res) => {
   try {
@@ -781,13 +791,11 @@ router.post("/league/score-update", async (req, res) => {
       total_score: progress.total_score,
       league: progress.league,
     });
-
   } catch (err) {
     console.log("League score update error:", err);
     return res.status(500).json({ error: "Server error" });
   }
 });
-
 
 router.get("/league/leaderboard", async (req, res) => {
   console.error("in leader board   ");
@@ -806,7 +814,6 @@ router.get("/league/leaderboard", async (req, res) => {
     console.error("📱 User-Agent:", req.headers["user-agent"]);
     console.error("🌐 Origin:", req.headers.origin);
     console.error("🧾 Query:", req.query);
-
 
     const leaderboard = await LeagueProgress.aggregate([
       // Join user data
@@ -869,7 +876,6 @@ router.get("/league/leaderboard", async (req, res) => {
     // 5️⃣ Response time
     console.error("⏱ Response time:", Date.now() - startTime, "ms");
 
-
     return res.json({ leaderboard });
   } catch (err) {
     console.error("❌ Leaderboard error");
@@ -884,11 +890,10 @@ router.get("/league/leaderboard", async (req, res) => {
   }
 });
 
-
 router.get("/league/rank", async (req, res) => {
   try {
     await connectDB();
-    console.log("inside leque rank , ", req.body, req.query)
+    console.log("inside leque rank , ", req.body, req.query);
 
     const { playerId } = req.query;
     if (!playerId) {
@@ -898,8 +903,6 @@ router.get("/league/rank", async (req, res) => {
     //  const result = await LeagueProgress.aggregate([
 
     //       { $match: { playerId } },
-
-
 
     //       // Join user to get username
 
@@ -920,8 +923,6 @@ router.get("/league/rank", async (req, res) => {
     //       },
 
     //       { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
-
-
 
     //       {
 
@@ -953,52 +954,29 @@ router.get("/league/rank", async (req, res) => {
 
     //     ]);
 
-
-
-
-
-
-
-
-
     const result = await LeagueProgress.aggregate([
-
       // 1. Rank all players by score
 
       {
-
         $setWindowFields: {
-
           sortBy: { total_score: -1 },
 
           output: {
-
-            ranknumber: { $rank: {} } // or $denseRank
-
-          }
-
-        }
-
+            ranknumber: { $rank: {} }, // or $denseRank
+          },
+        },
       },
-
-
 
       // 2. Match requested player
 
       {
-
-        $match: { playerId }
-
+        $match: { playerId },
       },
-
-
 
       // 3. Join user data
 
       {
-
         $lookup: {
-
           from: "users",
 
           localField: "playerId",
@@ -1006,31 +984,21 @@ router.get("/league/rank", async (req, res) => {
           foreignField: "playerId",
 
           as: "user",
-
         },
-
       },
 
       {
-
         $unwind: {
-
           path: "$user",
 
           preserveNullAndEmptyArrays: true,
-
         },
-
       },
-
-
 
       // 4. Final response shape
 
       {
-
         $project: {
-
           _id: 0,
 
           playerId: 1,
@@ -1046,17 +1014,12 @@ router.get("/league/rank", async (req, res) => {
           frame_index: { $ifNull: ["$user.frame_index", 0] },
 
           league: {
-
             name: "$league.name",
 
             level: "$league.level",
-
           },
-
         },
-
       },
-
     ]);
 
     console.log({ result });
@@ -1072,7 +1035,6 @@ router.get("/league/rank", async (req, res) => {
   }
 });
 
-
 router.get("/league/update", async (req, res) => {
   try {
     const cutoff = new Date();
@@ -1080,10 +1042,7 @@ router.get("/league/update", async (req, res) => {
 
     // Get players created/updated before cutoff
     const players = await LeagueProgress.find({
-      $or: [
-        { createdAt: { $lt: cutoff } },
-        { updatedAt: { $lt: cutoff } }
-      ]
+      $or: [{ createdAt: { $lt: cutoff } }, { updatedAt: { $lt: cutoff } }],
     });
 
     let updatedCount = 0;
@@ -1091,9 +1050,7 @@ router.get("/league/update", async (req, res) => {
     for (const player of players) {
       const score = player.score; // 🔴 change if your field name is different
 
-      const leagueData = LEAGUES.find(l =>
-        score >= l.min && score <= l.max
-      );
+      const leagueData = LEAGUES.find((l) => score >= l.min && score <= l.max);
 
       if (!leagueData) continue;
 
@@ -1107,9 +1064,9 @@ router.get("/league/update", async (req, res) => {
           {
             $set: {
               "league.name": leagueData.name,
-              "league.level": leagueData.level
-            }
-          }
+              "league.level": leagueData.level,
+            },
+          },
         );
         updatedCount++;
       }
@@ -1117,13 +1074,12 @@ router.get("/league/update", async (req, res) => {
 
     res.json({
       success: true,
-      updated: updatedCount
+      updated: updatedCount,
     });
-
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -1134,10 +1090,7 @@ router.get("/rankUpdate", async (req, res) => {
     const MULTIPLIER = 2;
 
     // 1️⃣ Fetch users (only what we need)
-    const users = await User.find(
-      {},
-      { levels: 1 }
-    ).lean();
+    const users = await User.find({}, { levels: 1 }).lean();
 
     let modifiedCount = 0;
 
@@ -1173,7 +1126,7 @@ router.get("/rankUpdate", async (req, res) => {
         newLevels[levelName] = {
           ...level,
           level_times: updatedTimes,
-          average_time: avg
+          average_time: avg,
         };
 
         userChanged = true;
@@ -1183,7 +1136,7 @@ router.get("/rankUpdate", async (req, res) => {
       if (userChanged) {
         await User.updateOne(
           { _id: user._id },
-          { $set: { levels: newLevels } }
+          { $set: { levels: newLevels } },
         );
         modifiedCount++;
       }
@@ -1192,26 +1145,16 @@ router.get("/rankUpdate", async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Rank update completed safely (JS calculated)",
-      modifiedDocuments: modifiedCount
+      modifiedDocuments: modifiedCount,
     });
   } catch (error) {
     console.error("Rank update error:", error);
     return res.status(500).json({
       success: false,
       message: "Rank update failed",
-      error: error.message
+      error: error.message,
     });
   }
 });
-
-
-
-
-
-
-
-
-
-
 
 export default router;
