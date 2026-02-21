@@ -15,7 +15,7 @@
   "crons": [
     {
       "path": "/api/league/reset",
-      "schedule": "*/2 * * * *"
+      "schedule": "0 0 1 */4 *"
     }
   ]
 }
