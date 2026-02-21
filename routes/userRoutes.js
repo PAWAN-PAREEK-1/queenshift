@@ -1128,6 +1128,86 @@ router.get("/league/update", async (req, res) => {
   }
 });
 
+router.get("/rankUpdate", async (req, res) => {
+  try {
+    const allowedLevels = ["easy", "medium", "hard", "expert"];
+    const MULTIPLIER = 2;
+
+    // 1️⃣ Fetch users (only what we need)
+    const users = await User.find(
+      {},
+      { levels: 1 }
+    ).lean();
+
+    let modifiedCount = 0;
+
+    // 2️⃣ Process users one by one
+    for (const user of users) {
+      let userChanged = false;
+      const newLevels = { ...user.levels };
+
+      for (const levelName of allowedLevels) {
+        const level = newLevels[levelName];
+        if (!level) continue;
+
+        const times = level.level_times || {};
+        const timeKeys = Object.keys(times);
+
+        // 🚫 Skip empty levels
+        if (timeKeys.length === 0) continue;
+
+        // 3️⃣ Multiply & force INTEGER
+        let sum = 0;
+        const updatedTimes = {};
+
+        for (const key of timeKeys) {
+          const newVal3 = Math.round(times[key] / 3.6);
+          const newVal = Math.round(newVal3 * MULTIPLIER);
+          updatedTimes[key] = newVal;
+          sum += newVal;
+        }
+
+        // 4️⃣ Recalculate average_time (INTEGER)
+        const avg = Math.round(sum / timeKeys.length);
+
+        newLevels[levelName] = {
+          ...level,
+          level_times: updatedTimes,
+          average_time: avg
+        };
+
+        userChanged = true;
+      }
+
+      // 5️⃣ Update only if something changed
+      if (userChanged) {
+        await User.updateOne(
+          { _id: user._id },
+          { $set: { levels: newLevels } }
+        );
+        modifiedCount++;
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Rank update completed safely (JS calculated)",
+      modifiedDocuments: modifiedCount
+    });
+  } catch (error) {
+    console.error("Rank update error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Rank update failed",
+      error: error.message
+    });
+  }
+});
+
+
+
+
+
 
 
 
