@@ -8,4 +8,5 @@ export const LEAGUES = [
   { name: "gold", level: 3, min: 3301, max: 4700 },
   { name: "gold", level: 2, min: 4701, max: 5750 },
   { name: "gold", level: 1, min: 5751, max: Infinity },
+  
 ];
