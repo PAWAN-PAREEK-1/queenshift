@@ -6,13 +6,33 @@ import { connectDB } from "../models/db.js";
 import transaction from "../models/transaction.js";
 import { LEAGUES } from "../leagueRules.js";
 import LeagueProgress from "../models/LeagueProgress.js";
-import fs from "fs"
+import SystemState from "../models/cronTime.js";
+import fs from "fs";
 import path from "path";
 const router = express.Router();
 
 export function calculateLeague(score) {
   const match = LEAGUES.find((l) => score >= l.min && score <= l.max);
   return match || { name: "bronze", level: 3 };
+}
+
+function getNextLeagueReset(lastRunAt) {
+  const last = lastRunAt ? new Date(lastRunAt) : new Date();
+
+  // clone date
+  const next = new Date(last);
+
+  // add 4 months in UTC
+  next.setUTCMonth(next.getUTCMonth() + 4);
+  next.setUTCHours(0, 0, 0, 0);
+
+  const nowUtcMs = Date.now(); // UTC
+  const remainingMs = Math.max(0, next.getTime() - nowUtcMs);
+
+  return {
+    nextRunAt: next, // Date object (UTC)
+    remainingMs,
+  };
 }
 
 // ----------------------
@@ -117,8 +137,24 @@ router.post("/update", async (req, res) => {
 });
 
 router.get("/time", async (req, res) => {
+  const system = await SystemState.findOne({ key: "league_reset" });
+
+  const { nextRunAt, remainingMs } = getNextLeagueReset(system?.lastRunAt);
+
   const date = Date.now();
-  return res.status(200).json({ data: { date } });
+  return res.status(200).json({
+    data: {
+      date,
+      nextRunAtUtc: nextRunAt.getTime(), // ✅ UTC
+      // remainingMs, // ✅ absolute UTC diff
+      // remaining: {
+      //   days: Math.floor(remainingMs / (1000 * 60 * 60 * 24)),
+      //   hours: Math.floor((remainingMs / (1000 * 60 * 60)) % 24),
+      //   minutes: Math.floor((remainingMs / (1000 * 60)) % 60),
+      //   seconds: Math.floor((remainingMs / 1000) % 60),
+      // },
+    },
+  });
 });
 
 router.get("/user", async (req, res) => {
@@ -290,11 +326,9 @@ router.post("/leader", async (req, res) => {
     //   return res.status(400).json({ message: "Invalid mode provided" });
     // }
     if (level === undefined || isNaN(parseInt(level, 10))) {
-      return res
-        .status(400)
-        .json({
-          message: "Level number is required and must be a valid number",
-        });
+      return res.status(400).json({
+        message: "Level number is required and must be a valid number",
+      });
     }
     const levelStr = String(level); // Map keys are stored as strings
 
@@ -1158,7 +1192,6 @@ router.get("/rankUpdate", async (req, res) => {
   }
 });
 
-
 // routes/leagueReset.js
 router.post("/league/reset", async (req, res) => {
   try {
@@ -1174,7 +1207,13 @@ router.post("/league/reset", async (req, res) => {
             level: 3,
           },
         },
-      }
+      },
+    );
+
+    await SystemState.updateOne(
+      { key: "league_reset" },
+      { lastRunAt: new Date() },
+      { upsert: true },
     );
 
     return res.json({
@@ -1185,8 +1224,6 @@ router.post("/league/reset", async (req, res) => {
     return res.status(500).json({ error: "Reset failed" });
   }
 });
-
-
 
 router.get("/admin/export-db", async (req, res) => {
   try {
@@ -1208,22 +1245,22 @@ router.get("/admin/export-db", async (req, res) => {
 
     fs.writeFileSync(
       path.join(exportDir, "users.json"),
-      JSON.stringify(users, null, 2)
+      JSON.stringify(users, null, 2),
     );
 
     fs.writeFileSync(
       path.join(exportDir, "leagueprogresses.json"),
-      JSON.stringify(leagueprogresses, null, 2)
+      JSON.stringify(leagueprogresses, null, 2),
     );
 
     fs.writeFileSync(
       path.join(exportDir, "levels.json"),
-      JSON.stringify(levels, null, 2)
+      JSON.stringify(levels, null, 2),
     );
 
     fs.writeFileSync(
       path.join(exportDir, "transactions.json"),
-      JSON.stringify(transactions, null, 2)
+      JSON.stringify(transactions, null, 2),
     );
 
     return res.json({
@@ -1241,10 +1278,6 @@ router.get("/admin/export-db", async (req, res) => {
     return res.status(500).json({ error: "Export failed" });
   }
 });
-
-
-
-
 
 router.post("/admin/import-db", async (req, res) => {
   try {
@@ -1272,16 +1305,16 @@ router.post("/admin/import-db", async (req, res) => {
 
     // 2️⃣ Read JSON files
     const users = JSON.parse(
-      fs.readFileSync(path.join(importDir, files.users), "utf8")
+      fs.readFileSync(path.join(importDir, files.users), "utf8"),
     );
     const leagueprogresses = JSON.parse(
-      fs.readFileSync(path.join(importDir, files.leagueprogresses), "utf8")
+      fs.readFileSync(path.join(importDir, files.leagueprogresses), "utf8"),
     );
     const levels = JSON.parse(
-      fs.readFileSync(path.join(importDir, files.levels), "utf8")
+      fs.readFileSync(path.join(importDir, files.levels), "utf8"),
     );
     const transactions = JSON.parse(
-      fs.readFileSync(path.join(importDir, files.transactions), "utf8")
+      fs.readFileSync(path.join(importDir, files.transactions), "utf8"),
     );
 
     // 3️⃣ DELETE existing documents (collections auto-exist)
