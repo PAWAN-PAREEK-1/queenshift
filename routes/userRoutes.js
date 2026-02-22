@@ -137,6 +137,7 @@ router.post("/update", async (req, res) => {
 });
 
 router.get("/time", async (req, res) => {
+   await connectDB();
   const system = await SystemState.findOne({ key: "league_reset" });
 
   const { nextRunAt, remainingMs } = getNextLeagueReset(system?.lastRunAt);
