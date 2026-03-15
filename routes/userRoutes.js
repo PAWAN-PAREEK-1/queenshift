@@ -158,7 +158,7 @@ router.get("/time", async (req, res) => {
   });
 });
 
-router.get("/user", async (req, res) => {
+router.get("/get-user-data", async (req, res) => {
   const { email } = req.body;
 
   await connectDB();
