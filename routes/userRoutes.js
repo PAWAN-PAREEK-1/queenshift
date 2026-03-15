@@ -159,12 +159,15 @@ router.get("/time", async (req, res) => {
 });
 
 router.get("/get-user-data", async (req, res) => {
-  const { email } = req.body;
+  const { email, playerId } = req.body;
 
   await connectDB();
 
-  if (!email) {
-    return res.status(400).json({ message: "email is required" });
+  // Require at least one identifier
+  if (!email && !playerId) {
+    return res.status(400).json({
+      message: "email or playerId is required"
+    });
   }
 
   try {
@@ -176,7 +179,12 @@ router.get("/get-user-data", async (req, res) => {
       levels: 1
     };
 
-    const user = await User.findOne({ email })
+    // Build query dynamically
+    const query = {};
+    if (email) query.email = email;
+    if (playerId) query.playerId = playerId;
+
+    const user = await User.findOne(query)
       .select(projection)
       .lean();
 
@@ -184,7 +192,6 @@ router.get("/get-user-data", async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Fetch all levels
     const allLevels = await Level.find().lean();
 
     const modes = ["easy", "medium", "hard", "expert"];
@@ -194,14 +201,15 @@ router.get("/get-user-data", async (req, res) => {
     for (const mode of modes) {
       const modeLevels = allLevels.filter(l => l.mode === mode);
 
-      formattedLevels[`${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`] =
-        modeLevels.map(level => ({
-          levelNumber: level.level,
-          levelTime:
-            user.levels?.[mode]?.level_times?.get?.(String(level.level)) ||
-            user.levels?.[mode]?.level_times?.[level.level] ||
-            0
-        }));
+      formattedLevels[
+        `${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`
+      ] = modeLevels.map(level => ({
+        levelNumber: level.level,
+        levelTime:
+          user.levels?.[mode]?.level_times?.get?.(String(level.level)) ||
+          user.levels?.[mode]?.level_times?.[level.level] ||
+          0
+      }));
     }
 
     const response = {
