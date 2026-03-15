@@ -159,9 +159,8 @@ router.get("/time", async (req, res) => {
 });
 
 router.get("/user", async (req, res) => {
-  // Assuming playerId is correctly passed in the request body, as shown in your original code.
-  // NOTE: For GET requests, query parameters (req.query) are often preferred over req.body.
   const { email } = req.body;
+
   await connectDB();
 
   if (!email) {
@@ -170,52 +169,58 @@ router.get("/user", async (req, res) => {
 
   try {
     const projection = {
-      // Include fields
       username: 1,
       avatar_index: 1,
       frame_index: 1,
       playerId: 1,
-      // Include specific nested fields
-      "levels.easy.current_level": 1,
-      "levels.medium.current_level": 1,
-      "levels.hard.current_level": 1,
-      "levels.expert.current_level": 1,
-      // Exclude fields (Mongoose includes _id by default unless you explicitly exclude it)
-      // We will keep the main _id for potential client use.
+      levels: 1
     };
 
     const user = await User.findOne({ email })
-      .select(projection) // Apply the projection
-      .lean(); // Use .lean() for faster query performance since we don't need Mongoose documents
+      .select(projection)
+      .lean();
 
     if (!user) {
-      return res
-        .status(404)
-        .json({ message: "User not found with this email" });
+      return res.status(404).json({ message: "User not found" });
     }
 
-    // --- Optional: Re-structure the levels object for a flatter response (cleaner client use) ---
-    const formattedUser = {
+    // Fetch all levels
+    const allLevels = await Level.find().lean();
+
+    const modes = ["easy", "medium", "hard", "expert"];
+
+    const formattedLevels = {};
+
+    for (const mode of modes) {
+      const modeLevels = allLevels.filter(l => l.mode === mode);
+
+      formattedLevels[`${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`] =
+        modeLevels.map(level => ({
+          levelNumber: level.level,
+          levelTime:
+            user.levels?.[mode]?.level_times?.get?.(String(level.level)) ||
+            user.levels?.[mode]?.level_times?.[level.level] ||
+            0
+        }));
+    }
+
+    const response = {
       _id: user._id,
       username: user.username,
       avatar_index: user.avatar_index,
       frame_index: user.frame_index,
       playerId: user.playerId,
-      email: user.email,
-      // current_levels: {
-      //     easy: user.levels.easy?.current_level || 0,
-      //     medium: user.levels.medium?.current_level || 0,
-      //     hard: user.levels.hard?.current_level || 0,
-      //     expert: user.levels.expert?.current_level || 0,
-      // }
+      levels: formattedLevels
     };
 
-    return res.status(200).json({ user: formattedUser });
+    return res.status(200).json({ user: response });
+
   } catch (err) {
-    console.log("Error fetching user data:", err);
-    res
-      .status(500)
-      .json({ error: "Server error while retrieving user data", err });
+    console.log("Error fetching user:", err);
+    return res.status(500).json({
+      message: "Server error",
+      error: err.message
+    });
   }
 });
 
