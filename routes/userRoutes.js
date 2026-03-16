@@ -41,6 +41,7 @@ function getNextLeagueReset(lastRunAt) {
 router.post("/signup", async (req, res) => {
   try {
     await connectDB();
+
     const { username, avatar_index, frame_index, email } = req.body;
 
     if (!username) {
@@ -49,23 +50,57 @@ router.post("/signup", async (req, res) => {
       });
     }
 
-    // Build OR condition dynamically
-    const orConditions = [{ username }];
+    const projection = {
+      username: 1,
+      avatar_index: 1,
+      frame_index: 1,
+      playerId: 1,
+      levels: 1
+    };
 
-    if (email) {
-      orConditions.push({ email });
-    }
+    const modes = ["easy", "medium", "hard", "expert"];
 
-    const isExist = await User.findOne({
-      $or: orConditions,
-    });
+    // check existing user
+    const existingUser = await User.findOne({
+      $or: [{ username }, ...(email ? [{ email }] : [])]
+    }).select(projection).lean();
 
-    if (isExist) {
-      return res.status(400).json({
-        message: "Username  already exists",
+    if (existingUser) {
+
+      const allLevels = await Level.find().lean();
+
+      const formattedLevels = {};
+
+      for (const mode of modes) {
+        const modeLevels = allLevels.filter(l => l.mode === mode);
+
+        formattedLevels[
+          `${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`
+        ] = modeLevels.map(level => ({
+          levelNumber: level.level,
+          levelTime:
+            existingUser.levels?.[mode]?.level_times?.get?.(String(level.level)) ||
+            existingUser.levels?.[mode]?.level_times?.[level.level] ||
+            0
+        }));
+      }
+
+      const response = {
+        _id: existingUser._id,
+        username: existingUser.username,
+        avatar_index: existingUser.avatar_index,
+        frame_index: existingUser.frame_index,
+        playerId: existingUser.playerId,
+        levels: formattedLevels
+      };
+
+      return res.status(200).json({
+        message: "User already registered",
+        user: response
       });
     }
 
+    // create new user
     const playerId = crypto.randomBytes(16).toString("hex");
 
     const user = new User({
@@ -73,20 +108,45 @@ router.post("/signup", async (req, res) => {
       frame_index,
       avatar_index,
       playerId,
-      email,
+      email
     });
+
     await user.save();
 
-    res.json({
-      message: "Signup successful",
+    const allLevels = await Level.find().lean();
+
+    const formattedLevels = {};
+
+    for (const mode of modes) {
+      const modeLevels = allLevels.filter(l => l.mode === mode);
+
+      formattedLevels[
+        `${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`
+      ] = modeLevels.map(level => ({
+        levelNumber: level.level,
+        levelTime: 0
+      }));
+    }
+
+    const response = {
+      _id: user._id,
       username: user.username,
-      frame_index: user.frame_index,
       avatar_index: user.avatar_index,
+      frame_index: user.frame_index,
       playerId: user.playerId,
-      email: user.email,
+      levels: formattedLevels
+    };
+
+    return res.status(200).json({
+      message: "Signup successful",
+      user: response
     });
+
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({
+      message: "Server error",
+      error: err.message
+    });
   }
 });
 
