@@ -48,31 +48,35 @@ router.post("/signup", async (req, res) => {
       return res.status(400).json({ message: "username is required" });
     }
 
-    const modes = ["easy", "medium", "hard", "expert"];
-
-    // Helper (only used when needed)
-    const formatLevels = (allLevels, userLevels = {}) => {
+    // ✅ Only return played levels
+    const formatPlayedLevels = (userLevels = {}) => {
       const formatted = {};
 
-      for (const mode of modes) {
-        const modeLevels = allLevels.filter(l => l.mode === mode);
+      for (const mode in userLevels) {
+        const levelTimes = userLevels[mode]?.level_times || {};
 
-        formatted[`${mode[0].toUpperCase() + mode.slice(1)}Levels`] =
-          modeLevels.map(level => ({
-            levelNumber: level.level,
-            levelTime:
-              userLevels?.[mode]?.level_times?.[level.level] || 0
-          }));
+        const levelsArray = Object.entries(levelTimes)
+          .map(([level, time]) => ({
+            levelNumber: Number(level),
+            levelTime: time
+          }))
+          .sort((a, b) => a.levelNumber - b.levelNumber); // optional sort
+
+        if (levelsArray.length > 0) {
+          formatted[
+            `${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`
+          ] = levelsArray;
+        }
       }
 
       return formatted;
     };
 
     // ============================
-    // CASE 1: playerId + email (EXISTING USER)
+    // CASE 1: playerId + email
     // ============================
     if (playerId && email) {
-      const existingUser = await User.findOne({ playerId });
+      const existingUser = await User.findOne({ playerId }).lean();
 
       if (!existingUser) {
         return res.status(404).json({
@@ -80,11 +84,11 @@ router.post("/signup", async (req, res) => {
         });
       }
 
-      existingUser.email = email;
-      await existingUser.save();
-
-      // fetch levels ONLY here
-      const allLevels = await Level.find().lean();
+      // update email
+      await User.updateOne(
+        { playerId },
+        { $set: { email } }
+      );
 
       return res.status(200).json({
         message: "Email updated successfully",
@@ -94,7 +98,7 @@ router.post("/signup", async (req, res) => {
           avatar_index: existingUser.avatar_index,
           frame_index: existingUser.frame_index,
           playerId: existingUser.playerId,
-          levels: formatLevels(allLevels, existingUser.levels)
+          levels: formatPlayedLevels(existingUser.levels)
         }
       });
     }
@@ -103,12 +107,10 @@ router.post("/signup", async (req, res) => {
     // CASE 2: email only
     // ============================
     if (email && !playerId) {
-      const existingEmail = await User.findOne({ email });
+      const existingEmail = await User.findOne({ email }).lean();
 
-      // 👉 EXISTING USER → SEND LEVELS
+      // 👉 EXISTING USER
       if (existingEmail) {
-        const allLevels = await Level.find().lean();
-
         return res.status(200).json({
           message: "User already exists with this email",
           user: {
@@ -117,12 +119,12 @@ router.post("/signup", async (req, res) => {
             avatar_index: existingEmail.avatar_index,
             frame_index: existingEmail.frame_index,
             playerId: existingEmail.playerId,
-            levels: formatLevels(allLevels, existingEmail.levels)
+            levels: formatPlayedLevels(existingEmail.levels)
           }
         });
       }
 
-      // 👉 NEW USER → NO LEVELS
+      // 👉 NEW USER
       const newPlayerId = crypto.randomBytes(16).toString("hex");
 
       const user = await User.create({
@@ -141,13 +143,16 @@ router.post("/signup", async (req, res) => {
           avatar_index: user.avatar_index,
           frame_index: user.frame_index,
           playerId: user.playerId
-          // ❌ NO levels here
+          // ❌ no levels
         }
       });
     }
 
+    // ============================
+    // INVALID CASE
+    // ============================
     return res.status(400).json({
-      message: "Invalid request"
+      message: "Provide email OR (playerId + email)"
     });
 
   } catch (err) {
