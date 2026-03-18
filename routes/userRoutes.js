@@ -48,7 +48,7 @@ router.post("/signup", async (req, res) => {
       return res.status(400).json({ message: "username is required" });
     }
 
-    // ✅ Only return played levels
+    // ✅ Only return played levels (no empty object)
     const formatPlayedLevels = (userLevels = {}) => {
       const formatted = {};
 
@@ -58,16 +58,18 @@ router.post("/signup", async (req, res) => {
         const levelsArray = Object.entries(levelTimes)
           .map(([level, time]) => ({
             levelNumber: Number(level),
-            levelTime: time,
+            levelTime: time
           }))
-          .sort((a, b) => a.levelNumber - b.levelNumber); // optional sort
+          .sort((a, b) => a.levelNumber - b.levelNumber);
 
         if (levelsArray.length > 0) {
-          formatted[`${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`] =
-            levelsArray;
+          formatted[
+            `${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`
+          ] = levelsArray;
         }
       }
 
+      // ✅ return null if empty
       return Object.keys(formatted).length ? formatted : null;
     };
 
@@ -79,13 +81,14 @@ router.post("/signup", async (req, res) => {
 
       if (!existingUser) {
         return res.status(404).json({
-          message: "PlayerId not found",
+          message: "PlayerId not found"
         });
       }
 
-      // update email
       await User.updateOne({ playerId }, { $set: { email } });
+
       const levels = formatPlayedLevels(existingUser.levels);
+
       return res.status(200).json({
         message: "Email updated successfully",
         user: {
@@ -94,8 +97,8 @@ router.post("/signup", async (req, res) => {
           avatar_index: existingUser.avatar_index,
           frame_index: existingUser.frame_index,
           playerId: existingUser.playerId,
-          ...(levels && { levels }),
-        },
+          ...(levels && { levels }) // ✅ correct
+        }
       });
     }
 
@@ -107,6 +110,8 @@ router.post("/signup", async (req, res) => {
 
       // 👉 EXISTING USER
       if (existingEmail) {
+        const levels = formatPlayedLevels(existingEmail.levels);
+
         return res.status(200).json({
           message: "User already exists with this email",
           user: {
@@ -115,8 +120,8 @@ router.post("/signup", async (req, res) => {
             avatar_index: existingEmail.avatar_index,
             frame_index: existingEmail.frame_index,
             playerId: existingEmail.playerId,
-            levels: formatPlayedLevels(existingEmail.levels),
-          },
+            ...(levels && { levels }) // ✅ FIXED HERE
+          }
         });
       }
 
@@ -128,7 +133,7 @@ router.post("/signup", async (req, res) => {
         avatar_index,
         frame_index,
         email,
-        playerId: newPlayerId,
+        playerId: newPlayerId
       });
 
       return res.status(201).json({
@@ -138,22 +143,19 @@ router.post("/signup", async (req, res) => {
           username: user.username,
           avatar_index: user.avatar_index,
           frame_index: user.frame_index,
-          playerId: user.playerId,
-          // ❌ no levels
-        },
+          playerId: user.playerId
+        }
       });
     }
 
-    // ============================
-    // INVALID CASE
-    // ============================
     return res.status(400).json({
-      message: "Provide email OR (playerId + email)",
+      message: "Provide email OR (playerId + email)"
     });
+
   } catch (err) {
     res.status(500).json({
       message: "Server error",
-      error: err.message,
+      error: err.message
     });
   }
 });
