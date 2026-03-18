@@ -58,18 +58,17 @@ router.post("/signup", async (req, res) => {
         const levelsArray = Object.entries(levelTimes)
           .map(([level, time]) => ({
             levelNumber: Number(level),
-            levelTime: time
+            levelTime: time,
           }))
           .sort((a, b) => a.levelNumber - b.levelNumber); // optional sort
 
         if (levelsArray.length > 0) {
-          formatted[
-            `${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`
-          ] = levelsArray;
+          formatted[`${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`] =
+            levelsArray;
         }
       }
 
-      return formatted;
+      return Object.keys(formatted).length ? formatted : null;
     };
 
     // ============================
@@ -80,16 +79,13 @@ router.post("/signup", async (req, res) => {
 
       if (!existingUser) {
         return res.status(404).json({
-          message: "PlayerId not found"
+          message: "PlayerId not found",
         });
       }
 
       // update email
-      await User.updateOne(
-        { playerId },
-        { $set: { email } }
-      );
-
+      await User.updateOne({ playerId }, { $set: { email } });
+      const levels = formatPlayedLevels(existingUser.levels);
       return res.status(200).json({
         message: "Email updated successfully",
         user: {
@@ -98,8 +94,8 @@ router.post("/signup", async (req, res) => {
           avatar_index: existingUser.avatar_index,
           frame_index: existingUser.frame_index,
           playerId: existingUser.playerId,
-          levels: formatPlayedLevels(existingUser.levels)
-        }
+          ...(levels && { levels }),
+        },
       });
     }
 
@@ -119,8 +115,8 @@ router.post("/signup", async (req, res) => {
             avatar_index: existingEmail.avatar_index,
             frame_index: existingEmail.frame_index,
             playerId: existingEmail.playerId,
-            levels: formatPlayedLevels(existingEmail.levels)
-          }
+            levels: formatPlayedLevels(existingEmail.levels),
+          },
         });
       }
 
@@ -132,7 +128,7 @@ router.post("/signup", async (req, res) => {
         avatar_index,
         frame_index,
         email,
-        playerId: newPlayerId
+        playerId: newPlayerId,
       });
 
       return res.status(201).json({
@@ -142,9 +138,9 @@ router.post("/signup", async (req, res) => {
           username: user.username,
           avatar_index: user.avatar_index,
           frame_index: user.frame_index,
-          playerId: user.playerId
+          playerId: user.playerId,
           // ❌ no levels
-        }
+        },
       });
     }
 
@@ -152,13 +148,12 @@ router.post("/signup", async (req, res) => {
     // INVALID CASE
     // ============================
     return res.status(400).json({
-      message: "Provide email OR (playerId + email)"
+      message: "Provide email OR (playerId + email)",
     });
-
   } catch (err) {
     res.status(500).json({
       message: "Server error",
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -210,7 +205,7 @@ router.post("/update", async (req, res) => {
 });
 
 router.get("/time", async (req, res) => {
-   await connectDB();
+  await connectDB();
   const system = await SystemState.findOne({ key: "league_reset" });
 
   const { nextRunAt, remainingMs } = getNextLeagueReset(system?.lastRunAt);
@@ -239,7 +234,7 @@ router.get("/get-user-data", async (req, res) => {
   // Require at least one identifier
   if (!email && !playerId) {
     return res.status(400).json({
-      message: "email or playerId is required"
+      message: "email or playerId is required",
     });
   }
 
@@ -249,7 +244,7 @@ router.get("/get-user-data", async (req, res) => {
       avatar_index: 1,
       frame_index: 1,
       playerId: 1,
-      levels: 1
+      levels: 1,
     };
 
     // Build query dynamically
@@ -257,9 +252,7 @@ router.get("/get-user-data", async (req, res) => {
     if (email) query.email = email;
     if (playerId) query.playerId = playerId;
 
-    const user = await User.findOne(query)
-      .select(projection)
-      .lean();
+    const user = await User.findOne(query).select(projection).lean();
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -272,17 +265,16 @@ router.get("/get-user-data", async (req, res) => {
     const formattedLevels = {};
 
     for (const mode of modes) {
-      const modeLevels = allLevels.filter(l => l.mode === mode);
+      const modeLevels = allLevels.filter((l) => l.mode === mode);
 
-      formattedLevels[
-        `${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`
-      ] = modeLevels.map(level => ({
-        levelNumber: level.level,
-        levelTime:
-          user.levels?.[mode]?.level_times?.get?.(String(level.level)) ||
-          user.levels?.[mode]?.level_times?.[level.level] ||
-          0
-      }));
+      formattedLevels[`${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`] =
+        modeLevels.map((level) => ({
+          levelNumber: level.level,
+          levelTime:
+            user.levels?.[mode]?.level_times?.get?.(String(level.level)) ||
+            user.levels?.[mode]?.level_times?.[level.level] ||
+            0,
+        }));
     }
 
     const response = {
@@ -291,16 +283,15 @@ router.get("/get-user-data", async (req, res) => {
       avatar_index: user.avatar_index,
       frame_index: user.frame_index,
       playerId: user.playerId,
-      levels: formattedLevels
+      levels: formattedLevels,
     };
 
     return res.status(200).json({ user: response });
-
   } catch (err) {
     console.log("Error fetching user:", err);
     return res.status(500).json({
       message: "Server error",
-      error: err.message
+      error: err.message,
     });
   }
 });
