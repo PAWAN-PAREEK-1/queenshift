@@ -42,104 +42,112 @@ router.post("/signup", async (req, res) => {
   try {
     await connectDB();
 
-    const { username, avatar_index, frame_index, email } = req.body;
+    const { username, avatar_index, frame_index, email, playerId } = req.body;
 
     if (!username) {
-      return res.status(400).json({
-        message: "username is required",
-      });
+      return res.status(400).json({ message: "username is required" });
     }
-
-    const projection = {
-      username: 1,
-      avatar_index: 1,
-      frame_index: 1,
-      playerId: 1,
-      levels: 1
-    };
 
     const modes = ["easy", "medium", "hard", "expert"];
 
-    // check existing user
-    const existingUser = await User.findOne({
-      $or: [{ username }, ...(email ? [{ email }] : [])]
-    }).select(projection).lean();
-
-    if (existingUser) {
-
-      const allLevels = await Level.find().lean();
-
-      const formattedLevels = {};
+    // Helper (only used when needed)
+    const formatLevels = (allLevels, userLevels = {}) => {
+      const formatted = {};
 
       for (const mode of modes) {
         const modeLevels = allLevels.filter(l => l.mode === mode);
 
-        formattedLevels[
-          `${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`
-        ] = modeLevels.map(level => ({
-          levelNumber: level.level,
-          levelTime:
-            existingUser.levels?.[mode]?.level_times?.get?.(String(level.level)) ||
-            existingUser.levels?.[mode]?.level_times?.[level.level] ||
-            0
-        }));
+        formatted[`${mode[0].toUpperCase() + mode.slice(1)}Levels`] =
+          modeLevels.map(level => ({
+            levelNumber: level.level,
+            levelTime:
+              userLevels?.[mode]?.level_times?.[level.level] || 0
+          }));
       }
 
-      const response = {
-        _id: existingUser._id,
-        username: existingUser.username,
-        avatar_index: existingUser.avatar_index,
-        frame_index: existingUser.frame_index,
-        playerId: existingUser.playerId,
-        levels: formattedLevels
-      };
+      return formatted;
+    };
+
+    // ============================
+    // CASE 1: playerId + email (EXISTING USER)
+    // ============================
+    if (playerId && email) {
+      const existingUser = await User.findOne({ playerId });
+
+      if (!existingUser) {
+        return res.status(404).json({
+          message: "PlayerId not found"
+        });
+      }
+
+      existingUser.email = email;
+      await existingUser.save();
+
+      // fetch levels ONLY here
+      const allLevels = await Level.find().lean();
 
       return res.status(200).json({
-        message: "User already registered",
-        user: response
+        message: "Email updated successfully",
+        user: {
+          _id: existingUser._id,
+          username: existingUser.username,
+          avatar_index: existingUser.avatar_index,
+          frame_index: existingUser.frame_index,
+          playerId: existingUser.playerId,
+          levels: formatLevels(allLevels, existingUser.levels)
+        }
       });
     }
 
-    // create new user
-    const playerId = crypto.randomBytes(16).toString("hex");
+    // ============================
+    // CASE 2: email only
+    // ============================
+    if (email && !playerId) {
+      const existingEmail = await User.findOne({ email });
 
-    const user = new User({
-      username,
-      frame_index,
-      avatar_index,
-      playerId,
-      email
-    });
+      // 👉 EXISTING USER → SEND LEVELS
+      if (existingEmail) {
+        const allLevels = await Level.find().lean();
 
-    await user.save();
+        return res.status(200).json({
+          message: "User already exists with this email",
+          user: {
+            _id: existingEmail._id,
+            username: existingEmail.username,
+            avatar_index: existingEmail.avatar_index,
+            frame_index: existingEmail.frame_index,
+            playerId: existingEmail.playerId,
+            levels: formatLevels(allLevels, existingEmail.levels)
+          }
+        });
+      }
 
-    const allLevels = await Level.find().lean();
+      // 👉 NEW USER → NO LEVELS
+      const newPlayerId = crypto.randomBytes(16).toString("hex");
 
-    const formattedLevels = {};
+      const user = await User.create({
+        username,
+        avatar_index,
+        frame_index,
+        email,
+        playerId: newPlayerId
+      });
 
-    for (const mode of modes) {
-      const modeLevels = allLevels.filter(l => l.mode === mode);
-
-      formattedLevels[
-        `${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`
-      ] = modeLevels.map(level => ({
-        levelNumber: level.level,
-        levelTime: 0
-      }));
+      return res.status(201).json({
+        message: "Signup successful",
+        user: {
+          _id: user._id,
+          username: user.username,
+          avatar_index: user.avatar_index,
+          frame_index: user.frame_index,
+          playerId: user.playerId
+          // ❌ NO levels here
+        }
+      });
     }
 
-    const response = {
-      _id: user._id,
-      username: user.username,
-      avatar_index: user.avatar_index,
-      frame_index: user.frame_index,
-      playerId: user.playerId,
-      levels: formattedLevels
-    };
-
-    return res.status(200).json({
-      message: "Signup successful",
-      user: response
+    return res.status(400).json({
+      message: "Invalid request"
     });
 
   } catch (err) {
