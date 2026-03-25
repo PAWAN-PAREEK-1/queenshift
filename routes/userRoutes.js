@@ -1476,4 +1476,101 @@ router.post("/admin/import-db", async (req, res) => {
     });
   }
 });
+
+router.post("/update-levels", async (req, res) => {
+  try {
+    await connectDB();
+
+    const { playerId, levelsData } = req.body;
+
+    if (!playerId || !levelsData) {
+      return res.status(400).json({
+        message: "playerId and levelsData are required"
+      });
+    }
+
+    const user = await User.findOne({ playerId });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    // ============================
+    // MODE MAPPING
+    // ============================
+    const modeMap = {
+      EasyLevels: "easy",
+      MediumLevels: "medium",
+      HardLevels: "hard",
+      ExpertLevels: "expert",
+      DailyquestLevels: "dailyquest",
+      WeeklychallengeLevels: "weeklychallenge",
+      ThetowerLevels: "thetower",
+      TimerushLevels: "timerush",
+      TwistermodeLevels: "twistermode"
+    };
+
+    // ============================
+    // PROCESS EACH MODE
+    // ============================
+    for (const key in levelsData) {
+      const modeKey = modeMap[key];
+      if (!modeKey) continue;
+
+      const incomingLevels = levelsData[key];
+      if (!Array.isArray(incomingLevels) || incomingLevels.length === 0) continue;
+
+      const levelDoc = user.levels[modeKey];
+
+      // Ensure map exists
+      if (!levelDoc.level_times) {
+        levelDoc.level_times = new Map();
+      }
+
+      // 🔥 MERGE / REPLACE LOGIC
+      for (const { levelNumber, levelTime } of incomingLevels) {
+        if (
+          typeof levelNumber !== "number" ||
+          typeof levelTime !== "number"
+        ) continue;
+
+        // ✅ replace or add
+        levelDoc.level_times.set(String(levelNumber), levelTime);
+      }
+
+      // ============================
+      // UPDATE current_level
+      // ============================
+      const allLevels = Array.from(levelDoc.level_times.keys()).map(Number);
+
+      if (allLevels.length > 0) {
+        levelDoc.current_level = Math.max(...allLevels);
+      }
+
+      // ============================
+      // UPDATE average_time
+      // ============================
+      const times = Array.from(levelDoc.level_times.values());
+
+      if (times.length > 0) {
+        const sum = times.reduce((a, b) => a + b, 0);
+        levelDoc.average_time = Math.round(sum / times.length);
+      }
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      message: "success"
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      message: "Server error",
+      error: err.message
+    });
+  }
+});
 export default router;
