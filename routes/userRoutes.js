@@ -49,7 +49,7 @@ router.post("/signup", async (req, res) => {
     }
 
     // ============================
-    // FORMAT PLAYED LEVELS ONLY
+    // FORMAT LEVELS
     // ============================
     const formatPlayedLevels = (userLevels = {}) => {
       const formatted = {};
@@ -64,7 +64,7 @@ router.post("/signup", async (req, res) => {
           }))
           .sort((a, b) => a.levelNumber - b.levelNumber);
 
-        if (levelsArray.length > 0) {
+        if (levelsArray.length) {
           formatted[
             `${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`
           ] = levelsArray;
@@ -78,6 +78,27 @@ router.post("/signup", async (req, res) => {
     // CASE 1: playerId + email
     // ============================
     if (playerId && email) {
+
+      // ✅ NEW CONDITION: if email already exists → return that user
+      const emailUser = await User.findOne({ email }).lean();
+
+      if (emailUser) {
+        const levels = formatPlayedLevels(emailUser.levels);
+
+        return res.status(200).json({
+          message: "User already exists with this email",
+          user: {
+            _id: emailUser._id,
+            username: emailUser.username,
+            avatar_index: emailUser.avatar_index,
+            frame_index: emailUser.frame_index,
+            playerId: emailUser.playerId,
+            ...(levels && { levels })
+          }
+        });
+      }
+
+      // 🔽 fallback → normal playerId flow
       const existingUser = await User.findOne({ playerId }).lean();
 
       if (!existingUser) {
@@ -108,7 +129,6 @@ router.post("/signup", async (req, res) => {
     // ============================
     if (email && !playerId) {
 
-      // ✅ check existing email
       const existingEmail = await User.findOne({ email }).lean();
 
       if (existingEmail) {
@@ -127,15 +147,14 @@ router.post("/signup", async (req, res) => {
         });
       }
 
-      // ✅ check duplicate username BEFORE insert
-      const existingUsername = await User.findOne({ username }).lean();
+      // ✅ check username only when creating new user
+      const existingUsername = await User.exists({ username });
       if (existingUsername) {
         return res.status(400).json({
           message: "Username already exists"
         });
       }
 
-      // 👉 CREATE NEW USER
       const newPlayerId = crypto.randomBytes(16).toString("hex");
 
       const user = await User.create({
@@ -154,29 +173,23 @@ router.post("/signup", async (req, res) => {
           avatar_index: user.avatar_index,
           frame_index: user.frame_index,
           playerId: user.playerId
-          // ❌ no levels for new user
         }
       });
     }
 
-    // ============================
-    // INVALID CASE
-    // ============================
     return res.status(400).json({
       message: "Provide email OR (playerId + email)"
     });
 
   } catch (err) {
 
-    // ============================
-    // HANDLE DUPLICATE KEY ERROR
-    // ============================
     if (err.code === 11000) {
       const field = Object.keys(err.keyPattern || err.keyValue)[0];
 
       let message = "Duplicate field value";
 
       if (field === "username") message = "Username already exists";
+      if (field === "email") message = "Email already exists";
 
       return res.status(400).json({ message });
     }
