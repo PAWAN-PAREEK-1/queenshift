@@ -44,7 +44,7 @@ router.post("/signup", async (req, res) => {
 
     const { username, avatar_index, frame_index, email, playerId } = req.body;
 
-    if (!username) {
+    if (!username && !playerId) {
       return res.status(400).json({ message: "username is required" });
     }
 
