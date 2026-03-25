@@ -1477,7 +1477,7 @@ router.post("/admin/import-db", async (req, res) => {
   }
 });
 
-router.post("/update-levels", async (req, res) => {
+router.post("/ReplaceAllLevelData", async (req, res) => {
   try {
     await connectDB();
 
