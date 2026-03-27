@@ -1573,4 +1573,54 @@ router.post("/ReplaceAllLevelData", async (req, res) => {
     });
   }
 });
+
+router.delete("/delete-account", async (req, res) => {
+  try {
+    await connectDB();
+
+    const { playerId, email } = req.body;
+
+    // ✅ validation
+    if (!playerId && !email) {
+      return res.status(400).json({
+        message: "Provide playerId or email"
+      });
+    }
+
+    // ============================
+    // BUILD QUERY DYNAMICALLY
+    // ============================
+    let query = {};
+
+    if (playerId && email) {
+      // 🔒 safest → both must match
+      query = { playerId, email };
+    } else if (playerId) {
+      query = { playerId };
+    } else if (email) {
+      query = { email };
+    }
+
+    // ============================
+    // DELETE USER
+    // ============================
+    const deletedUser = await User.findOneAndDelete(query).lean();
+
+    if (!deletedUser) {
+      return res.status(404).json({
+        message: "User not found or data mismatch"
+      });
+    }
+
+    return res.status(200).json({
+      message: "Account deleted successfully"
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      message: "Server error",
+      error: err.message
+    });
+  }
+});
 export default router;
