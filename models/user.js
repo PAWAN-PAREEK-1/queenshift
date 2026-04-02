@@ -57,11 +57,12 @@ const userSchema = new mongoose.Schema(
   },
 );
 
-const excludeDeleted = function (next) {
-  if (this.getFilter && this.getFilter().isDeleted === undefined) {
+const excludeDeleted = function () {
+  const filter = this.getFilter?.();
+
+  if (!filter || filter.isDeleted === undefined) {
     this.where({ isDeleted: { $ne: true } });
   }
-  next();
 };
 
 userSchema.pre('find', excludeDeleted);
@@ -72,13 +73,23 @@ userSchema.pre('updateOne', excludeDeleted);
 userSchema.pre('updateMany', excludeDeleted);
 userSchema.pre('exists', excludeDeleted);
 
-userSchema.pre('aggregate', function (next) {
-  // If the first stage is already a match for isDeleted, we can skip
-  const firstStage = this.pipeline()[0];
-  if (!firstStage || !firstStage.$match || firstStage.$match.isDeleted === undefined) {
-    this.pipeline().unshift({ $match: { isDeleted: { $ne: true } } });
+userSchema.pre('aggregate', function () {
+  const pipeline = this.pipeline();
+
+  if (pipeline.length === 0) {
+    pipeline.unshift({ $match: { isDeleted: { $ne: true } } });
+    return;
   }
-  next();
+
+  const firstStage = pipeline[0];
+
+  if (firstStage.$match) {
+    if (firstStage.$match.isDeleted === undefined) {
+      firstStage.$match.isDeleted = { $ne: true };
+    }
+  } else {
+    pipeline.unshift({ $match: { isDeleted: { $ne: true } } });
+  }
 });
 
 export default mongoose.model("User", userSchema);
