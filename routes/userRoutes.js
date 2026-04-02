@@ -41,52 +41,163 @@ function getNextLeagueReset(lastRunAt) {
 router.post("/signup", async (req, res) => {
   try {
     await connectDB();
-    const { username, avatar_index, frame_index, email } = req.body;
 
-    if (!username) {
-      return res.status(400).json({
-        message: "username is required",
+    const { username, avatar_index, frame_index, email, playerId } = req.body;
+
+    if (!username && !playerId) {
+      return res.status(400).json({ message: "username is required" });
+    }
+
+    // ============================
+    // FORMAT LEVELS
+    // ============================
+    const formatPlayedLevels = (userLevels = {}) => {
+      const formatted = {};
+
+      for (const mode in userLevels) {
+        const levelTimes = userLevels[mode]?.level_times || {};
+
+        const levelsArray = Object.entries(levelTimes)
+          .map(([level, time]) => ({
+            levelNumber: Number(level),
+            levelTime: time
+          }))
+          .sort((a, b) => a.levelNumber - b.levelNumber);
+
+        if (levelsArray.length) {
+          formatted[
+            `${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`
+          ] = levelsArray;
+        }
+      }
+
+      return Object.keys(formatted).length ? formatted : null;
+    };
+
+    // ============================
+    // CASE 1: playerId + email
+    // ============================
+    if (playerId && email) {
+
+      // ✅ NEW CONDITION: if email already exists → return that user
+      const emailUser = await User.findOne({ email, isDeleted: { $ne: true } }).lean();
+
+      if (emailUser) {
+        const levels = formatPlayedLevels(emailUser.levels);
+
+        return res.status(200).json({
+          message: "User already exists with this email",
+          user: {
+            _id: emailUser._id,
+            username: emailUser.username,
+            avatar_index: emailUser.avatar_index,
+            frame_index: emailUser.frame_index,
+            playerId: emailUser.playerId,
+            ...(levels && { levels })
+          }
+        });
+      }
+
+      // 🔽 fallback → normal playerId flow
+      const existingUser = await User.findOne({ playerId, isDeleted: { $ne: true } }).lean();
+
+      if (!existingUser) {
+        return res.status(404).json({
+          message: "PlayerId not found"
+        });
+      }
+
+      await User.updateOne({ playerId, isDeleted: { $ne: true } }, { $set: { email } });
+
+      const levels = formatPlayedLevels(existingUser.levels);
+
+      return res.status(200).json({
+        message: "Email updated successfully",
+        user: {
+          _id: existingUser._id,
+          username: existingUser.username,
+          avatar_index: existingUser.avatar_index,
+          frame_index: existingUser.frame_index,
+          playerId: existingUser.playerId,
+          ...(levels && { levels })
+        }
       });
     }
 
-    // Build OR condition dynamically
-    const orConditions = [{ username }];
+    // ============================
+    // CASE 2: email only
+    // ============================
+    if (email && !playerId) {
 
-    if (email) {
-      orConditions.push({ email });
-    }
+      const existingEmail = await User.findOne({ email, isDeleted: { $ne: true } }).lean();
 
-    const isExist = await User.findOne({
-      $or: orConditions,
-    });
+      if (existingEmail) {
+        const levels = formatPlayedLevels(existingEmail.levels);
 
-    if (isExist) {
-      return res.status(400).json({
-        message: "Username  already exists",
+        return res.status(200).json({
+          message: "User already exists with this email",
+          user: {
+            _id: existingEmail._id,
+            username: existingEmail.username,
+            avatar_index: existingEmail.avatar_index,
+            frame_index: existingEmail.frame_index,
+            playerId: existingEmail.playerId,
+            ...(levels && { levels })
+          }
+        });
+      }
+
+      // ✅ check username only when creating new user
+      const existingUsername = await User.exists({ username, isDeleted: { $ne: true } });
+      if (existingUsername) {
+        return res.status(400).json({
+          message: "Username already exists"
+        });
+      }
+
+      const newPlayerId = crypto.randomBytes(16).toString("hex");
+
+      const user = await User.create({
+        username,
+        avatar_index,
+        frame_index,
+        email,
+        playerId: newPlayerId
+      });
+
+      return res.status(201).json({
+        message: "Signup successful",
+        user: {
+          _id: user._id,
+          username: user.username,
+          avatar_index: user.avatar_index,
+          frame_index: user.frame_index,
+          playerId: user.playerId
+        }
       });
     }
 
-    const playerId = crypto.randomBytes(16).toString("hex");
-
-    const user = new User({
-      username,
-      frame_index,
-      avatar_index,
-      playerId,
-      email,
+    return res.status(400).json({
+      message: "Provide email OR (playerId + email)"
     });
-    await user.save();
 
-    res.json({
-      message: "Signup successful",
-      username: user.username,
-      frame_index: user.frame_index,
-      avatar_index: user.avatar_index,
-      playerId: user.playerId,
-      email: user.email,
-    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern || err.keyValue)[0];
+
+      let message = "Duplicate field value";
+
+      if (field === "username") message = "Username already exists";
+      if (field === "email") message = "Email already exists";
+
+      return res.status(400).json({ message });
+    }
+
+    return res.status(500).json({
+      message: "Server error",
+      error: err.message
+    });
   }
 });
 
@@ -103,12 +214,12 @@ router.post("/update", async (req, res) => {
     }
 
     // find user
-    const user = await User.findOne({ playerId: userId });
+    const user = await User.findOne({ playerId: userId, isDeleted: { $ne: true } });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
     if (typeof username !== "undefined" && username !== user.username) {
-      const usernameExists = await User.findOne({ username });
+      const usernameExists = await User.findOne({ username, isDeleted: { $ne: true } });
       if (usernameExists) {
         return res.status(409).json({ message: "Username already exists" });
       }
@@ -158,64 +269,73 @@ router.get("/time", async (req, res) => {
   });
 });
 
-router.get("/user", async (req, res) => {
-  // Assuming playerId is correctly passed in the request body, as shown in your original code.
-  // NOTE: For GET requests, query parameters (req.query) are often preferred over req.body.
-  const { email } = req.body;
+router.get("/get-user-data", async (req, res) => {
+  const { email, playerId } = req.body;
+
   await connectDB();
 
-  if (!email) {
-    return res.status(400).json({ message: "email is required" });
+  // Require at least one identifier
+  if (!email && !playerId) {
+    return res.status(400).json({
+      message: "email or playerId is required",
+    });
   }
 
   try {
     const projection = {
-      // Include fields
       username: 1,
       avatar_index: 1,
       frame_index: 1,
       playerId: 1,
-      // Include specific nested fields
-      "levels.easy.current_level": 1,
-      "levels.medium.current_level": 1,
-      "levels.hard.current_level": 1,
-      "levels.expert.current_level": 1,
-      // Exclude fields (Mongoose includes _id by default unless you explicitly exclude it)
-      // We will keep the main _id for potential client use.
+      levels: 1,
     };
 
-    const user = await User.findOne({ email })
-      .select(projection) // Apply the projection
-      .lean(); // Use .lean() for faster query performance since we don't need Mongoose documents
+    // Build query dynamically
+    const query = { isDeleted: { $ne: true } };
+    if (email) query.email = email;
+    if (playerId) query.playerId = playerId;
+
+    const user = await User.findOne(query).select(projection).lean();
 
     if (!user) {
-      return res
-        .status(404)
-        .json({ message: "User not found with this email" });
+      return res.status(404).json({ message: "User not found" });
     }
 
-    // --- Optional: Re-structure the levels object for a flatter response (cleaner client use) ---
-    const formattedUser = {
+    const allLevels = await Level.find().lean();
+
+    const modes = ["easy", "medium", "hard", "expert"];
+
+    const formattedLevels = {};
+
+    for (const mode of modes) {
+      const modeLevels = allLevels.filter((l) => l.mode === mode);
+
+      formattedLevels[`${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`] =
+        modeLevels.map((level) => ({
+          levelNumber: level.level,
+          levelTime:
+            user.levels?.[mode]?.level_times?.get?.(String(level.level)) ||
+            user.levels?.[mode]?.level_times?.[level.level] ||
+            0,
+        }));
+    }
+
+    const response = {
       _id: user._id,
       username: user.username,
       avatar_index: user.avatar_index,
       frame_index: user.frame_index,
       playerId: user.playerId,
-      email: user.email,
-      // current_levels: {
-      //     easy: user.levels.easy?.current_level || 0,
-      //     medium: user.levels.medium?.current_level || 0,
-      //     hard: user.levels.hard?.current_level || 0,
-      //     expert: user.levels.expert?.current_level || 0,
-      // }
+      levels: formattedLevels,
     };
 
-    return res.status(200).json({ user: formattedUser });
+    return res.status(200).json({ user: response });
   } catch (err) {
-    console.log("Error fetching user data:", err);
-    res
-      .status(500)
-      .json({ error: "Server error while retrieving user data", err });
+    console.log("Error fetching user:", err);
+    return res.status(500).json({
+      message: "Server error",
+      error: err.message,
+    });
   }
 });
 
@@ -245,7 +365,7 @@ router.post("/level-complete", async (req, res) => {
     }
 
     // 2️⃣ Find user
-    const user = await User.findOne({ playerId });
+    const user = await User.findOne({ playerId, isDeleted: { $ne: true } });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -287,6 +407,7 @@ router.post("/level-complete", async (req, res) => {
     const avgResult = await User.aggregate([
       {
         $match: {
+          isDeleted: { $ne: true },
           [`levels.${mode}.level_times.${requestedLevel}`]: { $exists: true },
         },
       },
@@ -343,6 +464,7 @@ router.post("/leader", async (req, res) => {
       // 1. Match users who completed the level
       {
         $match: {
+          isDeleted: { $ne: true },
           [`levels.${mode}.level_times.${levelStr}`]: { $gt: 0 },
         },
       },
@@ -451,7 +573,7 @@ router.post("/user-rank", async (req, res) => {
 
     // --- 2. Find the current user's time ---
     const user = await User.findOne(
-      { playerId },
+      { playerId, isDeleted: { $ne: true } },
       { [userLevelTimePath]: 1, username: 1 }, // Only fetch the required time and username
     );
 
@@ -479,6 +601,7 @@ router.post("/user-rank", async (req, res) => {
       // 1. Filter: Find all users who completed this level
       {
         $match: {
+          isDeleted: { $ne: true },
           [userLevelTimePath]: { $gt: 0 },
         },
       },
@@ -501,6 +624,7 @@ router.post("/user-rank", async (req, res) => {
 
     // --- 4. Get total players who completed the level (Optional, but useful for context) ---
     const totalPlayers = await User.countDocuments({
+      isDeleted: { $ne: true },
       [userLevelTimePath]: { $gt: 0 },
     });
     console.error("user rank completed ", { playerId, mode, level });
@@ -679,7 +803,7 @@ router.post("/bulk-level-complete", async (req, res) => {
     const playerIds = records.map((r) => r.playerId);
 
     // 1️⃣ Fetch all users in ONE query
-    const users = await User.find({ playerId: { $in: playerIds } });
+    const users = await User.find({ playerId: { $in: playerIds }, isDeleted: { $ne: true } });
     const userMap = new Map(users.map((u) => [u.playerId, u]));
 
     const userOps = [];
@@ -936,134 +1060,122 @@ router.get("/league/rank", async (req, res) => {
       return res.status(400).json({ error: "playerId is required" });
     }
 
-    // const result = await LeagueProgress.aggregate([
-    //   // 1. Rank all players by score
+    //  const result = await LeagueProgress.aggregate([
 
-    //   {
-    //     $setWindowFields: {
-    //       sortBy: { total_score: -1 },
+    //       { $match: { playerId } },
 
-    //       output: {
-    //         ranknumber: { $rank: {} }, // or $denseRank
-    //       },
-    //     },
-    //   },
+    //       // Join user to get username
 
-    //   // 2. Match requested player
+    //       {
 
-    //   {
-    //     $match: { playerId },
-    //   },
+    //         $lookup: {
 
-    //   // 3. Join user data
+    //           from: "users",
 
-    //   {
-    //     $lookup: {
-    //       from: "users",
+    //           localField: "playerId",
 
-    //       localField: "playerId",
+    //           foreignField: "playerId",
 
-    //       foreignField: "playerId",
+    //           as: "user",
 
-    //       as: "user",
-    //     },
-    //   },
+    //         },
 
-    //   {
-    //     $unwind: {
-    //       path: "$user",
+    //       },
 
-    //       preserveNullAndEmptyArrays: true,
-    //     },
-    //   },
+    //       { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
 
-    //   // 4. Final response shape
+    //       {
 
-    //   {
-    //     $project: {
-    //       _id: 0,
+    //         $project: {
 
-    //       playerId: 1,
+    //           _id: 0,
 
-    //       score: "$total_score",
+    //           playerId: 1,
 
-    //       ranknumber: 1,
+    //           score: "$total_score",
 
-    //       username: { $ifNull: ["$user.username", "Unknown"] },
+    //           username: { $ifNull: ["$user.username", "Unknown"] },
 
-    //       avatar_index: { $ifNull: ["$user.avatar_index", 0] },
+    //           avatar_index: { $ifNull: ["$user.avatar_index", 0] },
 
-    //       frame_index: { $ifNull: ["$user.frame_index", 0] },
+    //           frame_index: { $ifNull: ["$user.frame_index", 0] },
 
-    //       league: {
-    //         name: "$league.name",
+    //           league: {
 
-    //         level: "$league.level",
-    //       },
-    //     },
-    //   },
-    // ]);
+    //             name: "$league.name",
+
+    //             level: "$league.level",
+
+    //           },
+
+    //         },
+
+    //       },
+
+    //     ]);
 
     const result = await LeagueProgress.aggregate([
-      { $match: { playerId } },
+      // 1. Rank all players by score
 
       {
-        $lookup: {
-          from: "leagueprogresses",
-          let: {
-            leagueName: { $toLower: "$league.name" },
-            leagueLevel: "$league.level",
-          },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: [{ $toLower: "$league.name" }, "$$leagueName"] },
-                    { $eq: ["$league.level", "$$leagueLevel"] },
-                  ],
-                },
-              },
-            },
-            // 🔥 EXACT SAME SORT AS LEADERBOARD
-            { $sort: { total_score: -1 } },
-          ],
-          as: "leaguePlayers",
-        },
-      },
+        $setWindowFields: {
+          sortBy: { total_score: -1 },
 
-      {
-        $addFields: {
-          ranknumber: {
-            $add: [
-              { $indexOfArray: ["$leaguePlayers.playerId", "$playerId"] },
-              1,
-            ],
+          output: {
+            ranknumber: { $rank: {} }, // or $denseRank
           },
         },
       },
+
+      // 2. Match requested player
+
+      {
+        $match: { playerId },
+      },
+
+      // 3. Join user data
 
       {
         $lookup: {
           from: "users",
+
           localField: "playerId",
+
           foreignField: "playerId",
+
           as: "user",
         },
       },
-      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+
+      {
+        $unwind: {
+          path: "$user",
+
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // 4. Final response shape
 
       {
         $project: {
           _id: 0,
+
           playerId: 1,
+
           score: "$total_score",
+
           ranknumber: 1,
+
           username: { $ifNull: ["$user.username", "Unknown"] },
+
           avatar_index: { $ifNull: ["$user.avatar_index", 0] },
+
           frame_index: { $ifNull: ["$user.frame_index", 0] },
+
           league: {
             name: "$league.name",
+
             level: "$league.level",
           },
         },
@@ -1138,7 +1250,7 @@ router.get("/rankUpdate", async (req, res) => {
     const MULTIPLIER = 2;
 
     // 1️⃣ Fetch users (only what we need)
-    const users = await User.find({}, { levels: 1 }).lean();
+    const users = await User.find({ isDeleted: { $ne: true } }, { levels: 1 }).lean();
 
     let modifiedCount = 0;
 
@@ -1216,7 +1328,7 @@ router.post("/league/reset", async (req, res) => {
         $set: {
           total_score: 0,
           league: {
-            name: "bronze",
+            name: "Bronze",
             level: 3,
           },
         },
@@ -1342,10 +1454,10 @@ router.post("/admin/import-db", async (req, res) => {
     await Promise.all([
       users.length && User.insertMany(users, { ordered: false }),
       leagueprogresses.length &&
-        LeagueProgress.insertMany(leagueprogresses, { ordered: false }),
+      LeagueProgress.insertMany(leagueprogresses, { ordered: false }),
       levels.length && Level.insertMany(levels, { ordered: false }),
       transactions.length &&
-        transaction.insertMany(transactions, { ordered: false }),
+      transaction.insertMany(transactions, { ordered: false }),
     ]);
 
     // 5️⃣ Verify counts
@@ -1368,4 +1480,203 @@ router.post("/admin/import-db", async (req, res) => {
     });
   }
 });
+
+router.post("/ReplaceAllLevelData", async (req, res) => {
+  try {
+    await connectDB();
+
+    const { playerId, levelsData } = req.body;
+
+    if (!playerId || !levelsData) {
+      return res.status(400).json({
+        message: "playerId and levelsData are required"
+      });
+    }
+
+    const user = await User.findOne({ playerId, isDeleted: { $ne: true } });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    // ============================
+    // MODE MAPPING
+    // ============================
+    const modeMap = {
+      EasyLevels: "easy",
+      MediumLevels: "medium",
+      HardLevels: "hard",
+      ExpertLevels: "expert",
+      DailyquestLevels: "dailyquest",
+      WeeklychallengeLevels: "weeklychallenge",
+      ThetowerLevels: "thetower",
+      TimerushLevels: "timerush",
+      TwistermodeLevels: "twistermode"
+    };
+
+    // ============================
+    // PROCESS EACH MODE
+    // ============================
+    for (const key in levelsData) {
+      const modeKey = modeMap[key];
+      if (!modeKey) continue;
+
+      const incomingLevels = levelsData[key];
+      if (!Array.isArray(incomingLevels) || incomingLevels.length === 0) continue;
+
+      const levelDoc = user.levels[modeKey];
+
+      // Ensure map exists
+      if (!levelDoc.level_times) {
+        levelDoc.level_times = new Map();
+      }
+
+      // 🔥 MERGE / REPLACE LOGIC
+      for (const { levelNumber, levelTime } of incomingLevels) {
+        if (
+          typeof levelNumber !== "number" ||
+          typeof levelTime !== "number"
+        ) continue;
+
+        // ✅ replace or add
+        levelDoc.level_times.set(String(levelNumber), levelTime);
+      }
+
+      // ============================
+      // UPDATE current_level
+      // ============================
+      const allLevels = Array.from(levelDoc.level_times.keys()).map(Number);
+
+      if (allLevels.length > 0) {
+        levelDoc.current_level = Math.max(...allLevels);
+      }
+
+      // ============================
+      // UPDATE average_time
+      // ============================
+      const times = Array.from(levelDoc.level_times.values());
+
+      if (times.length > 0) {
+        const sum = times.reduce((a, b) => a + b, 0);
+        levelDoc.average_time = Math.round(sum / times.length);
+      }
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      message: "success"
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      message: "Server error",
+      error: err.message
+    });
+  }
+});
+
+router.delete("/delete-account", async (req, res) => {
+  try {
+    await connectDB();
+
+    const { playerId, email, days } = req.body;
+
+    // ✅ validation
+    if (!playerId && !email) {
+      return res.status(400).json({
+        message: "Provide playerId or email"
+      });
+    }
+
+    // ============================
+    // BUILD QUERY DYNAMICALLY
+    // ============================
+    let query = { isDeleted: { $ne: true } };
+
+    if (playerId && email) {
+      // 🔒 safest → both must match
+      query.playerId = playerId;
+      query.email = email;
+    } else if (playerId) {
+      query.playerId = playerId;
+    } else if (email) {
+      query.email = email;
+    }
+
+    const numDays = Number(days);
+
+    if (!isNaN(numDays) && numDays > 0) {
+      // schedule delete
+      const deleteScheduledAt = new Date();
+      deleteScheduledAt.setDate(deleteScheduledAt.getDate() + numDays);
+
+      // using findOneAndUpdate to trigger pre-hook, or just updateOne
+      // By default Mongoose 9 does trigger update hooks.
+      const scheduledUser = await User.findOneAndUpdate(query, {
+        $set: { deleteScheduledAt }
+      }, { new: true }).lean();
+
+      if (!scheduledUser) {
+        return res.status(404).json({
+          message: "User not found or already deleted"
+        });
+      }
+
+      return res.status(200).json({
+        message: `Account deletion scheduled in ${numDays} days`
+      });
+    } else {
+      // instant soft delete
+      const deletedUser = await User.findOneAndUpdate(query, {
+        $set: {
+          isDeleted: true,
+          deleteScheduledAt: new Date()
+        }
+      }, { new: true }).lean();
+
+      if (!deletedUser) {
+        return res.status(404).json({
+          message: "User not found or already deleted"
+        });
+      }
+
+      return res.status(200).json({
+        message: "Account deleted successfully"
+      });
+    }
+
+  } catch (err) {
+    return res.status(500).json({
+      message: "Server error",
+      error: err.message
+    });
+  }
+});
+
+router.get("/cleanup-deleted", async (req, res) => {
+  try {
+    await connectDB();
+
+    // Find all users scheduled for deletion where the time has passed
+    // explicitly check `isDeleted: { $ne: true }` so it bypasses hook appropriately
+    // Actually the hook automatically adds `isDeleted: { $ne: true }` if missing.
+    const result = await User.updateMany({
+      deleteScheduledAt: { $lte: new Date() }
+    }, {
+      $set: { isDeleted: true }
+    });
+
+    return res.status(200).json({
+      message: "Cleanup completed",
+      modifiedCount: result.modifiedCount
+    });
+  } catch (err) {
+    console.error("Cleanup error:", err);
+    return res.status(500).json({ message: "Server error during cleanup" });
+  }
+});
+
 export default router;
