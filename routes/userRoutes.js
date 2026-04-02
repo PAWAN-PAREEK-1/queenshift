@@ -80,7 +80,7 @@ router.post("/signup", async (req, res) => {
     if (playerId && email) {
 
       // ✅ NEW CONDITION: if email already exists → return that user
-      const emailUser = await User.findOne({ email }).lean();
+      const emailUser = await User.findOne({ email, isDeleted: { $ne: true } }).lean();
 
       if (emailUser) {
         const levels = formatPlayedLevels(emailUser.levels);
@@ -99,7 +99,7 @@ router.post("/signup", async (req, res) => {
       }
 
       // 🔽 fallback → normal playerId flow
-      const existingUser = await User.findOne({ playerId }).lean();
+      const existingUser = await User.findOne({ playerId, isDeleted: { $ne: true } }).lean();
 
       if (!existingUser) {
         return res.status(404).json({
@@ -107,7 +107,7 @@ router.post("/signup", async (req, res) => {
         });
       }
 
-      await User.updateOne({ playerId }, { $set: { email } });
+      await User.updateOne({ playerId, isDeleted: { $ne: true } }, { $set: { email } });
 
       const levels = formatPlayedLevels(existingUser.levels);
 
@@ -129,7 +129,7 @@ router.post("/signup", async (req, res) => {
     // ============================
     if (email && !playerId) {
 
-      const existingEmail = await User.findOne({ email }).lean();
+      const existingEmail = await User.findOne({ email, isDeleted: { $ne: true } }).lean();
 
       if (existingEmail) {
         const levels = formatPlayedLevels(existingEmail.levels);
@@ -148,7 +148,7 @@ router.post("/signup", async (req, res) => {
       }
 
       // ✅ check username only when creating new user
-      const existingUsername = await User.exists({ username });
+      const existingUsername = await User.exists({ username, isDeleted: { $ne: true } });
       if (existingUsername) {
         return res.status(400).json({
           message: "Username already exists"
@@ -214,12 +214,12 @@ router.post("/update", async (req, res) => {
     }
 
     // find user
-    const user = await User.findOne({ playerId: userId });
+    const user = await User.findOne({ playerId: userId, isDeleted: { $ne: true } });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
     if (typeof username !== "undefined" && username !== user.username) {
-      const usernameExists = await User.findOne({ username });
+      const usernameExists = await User.findOne({ username, isDeleted: { $ne: true } });
       if (usernameExists) {
         return res.status(409).json({ message: "Username already exists" });
       }
@@ -291,7 +291,7 @@ router.get("/get-user-data", async (req, res) => {
     };
 
     // Build query dynamically
-    const query = {};
+    const query = { isDeleted: { $ne: true } };
     if (email) query.email = email;
     if (playerId) query.playerId = playerId;
 
@@ -365,7 +365,7 @@ router.post("/level-complete", async (req, res) => {
     }
 
     // 2️⃣ Find user
-    const user = await User.findOne({ playerId });
+    const user = await User.findOne({ playerId, isDeleted: { $ne: true } });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -407,6 +407,7 @@ router.post("/level-complete", async (req, res) => {
     const avgResult = await User.aggregate([
       {
         $match: {
+          isDeleted: { $ne: true },
           [`levels.${mode}.level_times.${requestedLevel}`]: { $exists: true },
         },
       },
@@ -463,6 +464,7 @@ router.post("/leader", async (req, res) => {
       // 1. Match users who completed the level
       {
         $match: {
+          isDeleted: { $ne: true },
           [`levels.${mode}.level_times.${levelStr}`]: { $gt: 0 },
         },
       },
@@ -571,7 +573,7 @@ router.post("/user-rank", async (req, res) => {
 
     // --- 2. Find the current user's time ---
     const user = await User.findOne(
-      { playerId },
+      { playerId, isDeleted: { $ne: true } },
       { [userLevelTimePath]: 1, username: 1 }, // Only fetch the required time and username
     );
 
@@ -599,6 +601,7 @@ router.post("/user-rank", async (req, res) => {
       // 1. Filter: Find all users who completed this level
       {
         $match: {
+          isDeleted: { $ne: true },
           [userLevelTimePath]: { $gt: 0 },
         },
       },
@@ -621,6 +624,7 @@ router.post("/user-rank", async (req, res) => {
 
     // --- 4. Get total players who completed the level (Optional, but useful for context) ---
     const totalPlayers = await User.countDocuments({
+      isDeleted: { $ne: true },
       [userLevelTimePath]: { $gt: 0 },
     });
     console.error("user rank completed ", { playerId, mode, level });
@@ -799,7 +803,7 @@ router.post("/bulk-level-complete", async (req, res) => {
     const playerIds = records.map((r) => r.playerId);
 
     // 1️⃣ Fetch all users in ONE query
-    const users = await User.find({ playerId: { $in: playerIds } });
+    const users = await User.find({ playerId: { $in: playerIds }, isDeleted: { $ne: true } });
     const userMap = new Map(users.map((u) => [u.playerId, u]));
 
     const userOps = [];
@@ -1246,7 +1250,7 @@ router.get("/rankUpdate", async (req, res) => {
     const MULTIPLIER = 2;
 
     // 1️⃣ Fetch users (only what we need)
-    const users = await User.find({}, { levels: 1 }).lean();
+    const users = await User.find({ isDeleted: { $ne: true } }, { levels: 1 }).lean();
 
     let modifiedCount = 0;
 
@@ -1450,10 +1454,10 @@ router.post("/admin/import-db", async (req, res) => {
     await Promise.all([
       users.length && User.insertMany(users, { ordered: false }),
       leagueprogresses.length &&
-        LeagueProgress.insertMany(leagueprogresses, { ordered: false }),
+      LeagueProgress.insertMany(leagueprogresses, { ordered: false }),
       levels.length && Level.insertMany(levels, { ordered: false }),
       transactions.length &&
-        transaction.insertMany(transactions, { ordered: false }),
+      transaction.insertMany(transactions, { ordered: false }),
     ]);
 
     // 5️⃣ Verify counts
@@ -1489,7 +1493,7 @@ router.post("/ReplaceAllLevelData", async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ playerId });
+    const user = await User.findOne({ playerId, isDeleted: { $ne: true } });
 
     if (!user) {
       return res.status(404).json({
@@ -1578,7 +1582,7 @@ router.delete("/delete-account", async (req, res) => {
   try {
     await connectDB();
 
-    const { playerId, email } = req.body;
+    const { playerId, email, days } = req.body;
 
     // ✅ validation
     if (!playerId && !email) {
@@ -1590,31 +1594,59 @@ router.delete("/delete-account", async (req, res) => {
     // ============================
     // BUILD QUERY DYNAMICALLY
     // ============================
-    let query = {};
+    let query = { isDeleted: { $ne: true } };
 
     if (playerId && email) {
       // 🔒 safest → both must match
-      query = { playerId, email };
+      query.playerId = playerId;
+      query.email = email;
     } else if (playerId) {
-      query = { playerId };
+      query.playerId = playerId;
     } else if (email) {
-      query = { email };
+      query.email = email;
     }
 
-    // ============================
-    // DELETE USER
-    // ============================
-    const deletedUser = await User.findOneAndDelete(query).lean();
+    const numDays = Number(days);
 
-    if (!deletedUser) {
-      return res.status(404).json({
-        message: "User not found or data mismatch"
+    if (!isNaN(numDays) && numDays > 0) {
+      // schedule delete
+      const deleteScheduledAt = new Date();
+      deleteScheduledAt.setDate(deleteScheduledAt.getDate() + numDays);
+
+      // using findOneAndUpdate to trigger pre-hook, or just updateOne
+      // By default Mongoose 9 does trigger update hooks.
+      const scheduledUser = await User.findOneAndUpdate(query, {
+        $set: { deleteScheduledAt }
+      }, { new: true }).lean();
+
+      if (!scheduledUser) {
+        return res.status(404).json({
+          message: "User not found or already deleted"
+        });
+      }
+
+      return res.status(200).json({
+        message: `Account deletion scheduled in ${numDays} days`
+      });
+    } else {
+      // instant soft delete
+      const deletedUser = await User.findOneAndUpdate(query, {
+        $set: {
+          isDeleted: true,
+          deleteScheduledAt: new Date()
+        }
+      }, { new: true }).lean();
+
+      if (!deletedUser) {
+        return res.status(404).json({
+          message: "User not found or already deleted"
+        });
+      }
+
+      return res.status(200).json({
+        message: "Account deleted successfully"
       });
     }
-
-    return res.status(200).json({
-      message: "Account deleted successfully"
-    });
 
   } catch (err) {
     return res.status(500).json({
@@ -1623,4 +1655,28 @@ router.delete("/delete-account", async (req, res) => {
     });
   }
 });
+
+router.get("/cleanup-deleted", async (req, res) => {
+  try {
+    await connectDB();
+
+    // Find all users scheduled for deletion where the time has passed
+    // explicitly check `isDeleted: { $ne: true }` so it bypasses hook appropriately
+    // Actually the hook automatically adds `isDeleted: { $ne: true }` if missing.
+    const result = await User.updateMany({
+      deleteScheduledAt: { $lte: new Date() }
+    }, {
+      $set: { isDeleted: true }
+    });
+
+    return res.status(200).json({
+      message: "Cleanup completed",
+      modifiedCount: result.modifiedCount
+    });
+  } catch (err) {
+    console.error("Cleanup error:", err);
+    return res.status(500).json({ message: "Server error during cleanup" });
+  }
+});
+
 export default router;
