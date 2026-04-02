@@ -43,10 +43,42 @@ const userSchema = new mongoose.Schema(
       unique: true,
       sparse: true,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deleteScheduledAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true, // ✅ THIS ADDS createdAt & updatedAt
   },
 );
+
+const excludeDeleted = function (next) {
+  if (this.getFilter && this.getFilter().isDeleted === undefined) {
+    this.where({ isDeleted: { $ne: true } });
+  }
+  next();
+};
+
+userSchema.pre('find', excludeDeleted);
+userSchema.pre('findOne', excludeDeleted);
+userSchema.pre('findOneAndUpdate', excludeDeleted);
+userSchema.pre('countDocuments', excludeDeleted);
+userSchema.pre('updateOne', excludeDeleted);
+userSchema.pre('updateMany', excludeDeleted);
+userSchema.pre('exists', excludeDeleted);
+
+userSchema.pre('aggregate', function (next) {
+  // If the first stage is already a match for isDeleted, we can skip
+  const firstStage = this.pipeline()[0];
+  if (!firstStage || !firstStage.$match || firstStage.$match.isDeleted === undefined) {
+    this.pipeline().unshift({ $match: { isDeleted: { $ne: true } } });
+  }
+  next();
+});
 
 export default mongoose.model("User", userSchema);
