@@ -16,6 +16,10 @@
     {
       "path": "/api/league/reset",
       "schedule": "0 0 1 */4 *"
+    },
+    {
+      "path": "/api/user/cleanup-deleted",
+      "schedule": "0 0 * * *"
     }
   ]
 }
