@@ -42,7 +42,14 @@ router.post("/signup", async (req, res) => {
   try {
     await connectDB();
 
-    const { username, avatar_index, frame_index, email, playerId } = req.body;
+    const {
+      username,
+      avatar_index,
+      frame_index,
+      email,
+      playerId,
+      cancel_delete,
+    } = req.body;
 
     if (!username && !playerId) {
       return res.status(400).json({ message: "username is required" });
@@ -60,14 +67,13 @@ router.post("/signup", async (req, res) => {
         const levelsArray = Object.entries(levelTimes)
           .map(([level, time]) => ({
             levelNumber: Number(level),
-            levelTime: time
+            levelTime: time,
           }))
           .sort((a, b) => a.levelNumber - b.levelNumber);
 
         if (levelsArray.length) {
-          formatted[
-            `${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`
-          ] = levelsArray;
+          formatted[`${mode.charAt(0).toUpperCase() + mode.slice(1)}Levels`] =
+            levelsArray;
         }
       }
 
@@ -78,9 +84,11 @@ router.post("/signup", async (req, res) => {
     // CASE 1: playerId + email
     // ============================
     if (playerId && email) {
-
       // ✅ NEW CONDITION: if email already exists → return that user
-      const emailUser = await User.findOne({ email, isDeleted: { $ne: true } }).lean();
+      const emailUser = await User.findOne({
+        email,
+        isDeleted: { $ne: true },
+      }).lean();
 
       if (emailUser) {
         const levels = formatPlayedLevels(emailUser.levels);
@@ -93,21 +101,27 @@ router.post("/signup", async (req, res) => {
             avatar_index: emailUser.avatar_index,
             frame_index: emailUser.frame_index,
             playerId: emailUser.playerId,
-            ...(levels && { levels })
-          }
+            ...(levels && { levels }),
+          },
         });
       }
 
       // 🔽 fallback → normal playerId flow
-      const existingUser = await User.findOne({ playerId, isDeleted: { $ne: true } }).lean();
+      const existingUser = await User.findOne({
+        playerId,
+        isDeleted: { $ne: true },
+      }).lean();
 
       if (!existingUser) {
         return res.status(404).json({
-          message: "PlayerId not found"
+          message: "PlayerId not found",
         });
       }
 
-      await User.updateOne({ playerId, isDeleted: { $ne: true } }, { $set: { email } });
+      await User.updateOne(
+        { playerId, isDeleted: { $ne: true } },
+        { $set: { email } },
+      );
 
       const levels = formatPlayedLevels(existingUser.levels);
 
@@ -119,8 +133,8 @@ router.post("/signup", async (req, res) => {
           avatar_index: existingUser.avatar_index,
           frame_index: existingUser.frame_index,
           playerId: existingUser.playerId,
-          ...(levels && { levels })
-        }
+          ...(levels && { levels }),
+        },
       });
     }
 
@@ -128,8 +142,10 @@ router.post("/signup", async (req, res) => {
     // CASE 2: email only
     // ============================
     if (email && !playerId) {
-
-      const existingEmail = await User.findOne({ email, isDeleted: { $ne: true } }).lean();
+      const existingEmail = await User.findOne({
+        email,
+        isDeleted: { $ne: true },
+      }).lean();
 
       if (existingEmail) {
         const levels = formatPlayedLevels(existingEmail.levels);
@@ -142,16 +158,20 @@ router.post("/signup", async (req, res) => {
             avatar_index: existingEmail.avatar_index,
             frame_index: existingEmail.frame_index,
             playerId: existingEmail.playerId,
-            ...(levels && { levels })
-          }
+            ...(levels && { levels }),
+            deleteScheduledAt: existingEmail.deleteScheduledAt,
+          },
         });
       }
 
       // ✅ check username only when creating new user
-      const existingUsername = await User.exists({ username, isDeleted: { $ne: true } });
+      const existingUsername = await User.exists({
+        username,
+        isDeleted: { $ne: true },
+      });
       if (existingUsername) {
         return res.status(400).json({
-          message: "Username already exists"
+          message: "Username already exists",
         });
       }
 
@@ -162,7 +182,7 @@ router.post("/signup", async (req, res) => {
         avatar_index,
         frame_index,
         email,
-        playerId: newPlayerId
+        playerId: newPlayerId,
       });
 
       return res.status(201).json({
@@ -172,17 +192,15 @@ router.post("/signup", async (req, res) => {
           username: user.username,
           avatar_index: user.avatar_index,
           frame_index: user.frame_index,
-          playerId: user.playerId
-        }
+          playerId: user.playerId,
+        },
       });
     }
 
     return res.status(400).json({
-      message: "Provide email OR (playerId + email)"
+      message: "Provide email OR (playerId + email)",
     });
-
   } catch (err) {
-
     if (err.code === 11000) {
       const field = Object.keys(err.keyPattern || err.keyValue)[0];
 
@@ -196,7 +214,7 @@ router.post("/signup", async (req, res) => {
 
     return res.status(500).json({
       message: "Server error",
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -207,19 +225,34 @@ router.post("/signup", async (req, res) => {
 router.post("/update", async (req, res) => {
   try {
     await connectDB();
-    const { playerId, username, avatar_index, frame_index } = req.body;
+    const {
+      playerId,
+      username,
+      avatar_index,
+      frame_index,
+      coinValue,
+      hintValue,
+      lastDailyQuestDate,
+      lastNewEventDate,
+    } = req.body;
     const userId = playerId;
     if (!userId) {
       return res.status(400).json({ message: "userId is required" });
     }
 
     // find user
-    const user = await User.findOne({ playerId: userId, isDeleted: { $ne: true } });
+    const user = await User.findOne({
+      playerId: userId,
+      isDeleted: { $ne: true },
+    });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
     if (typeof username !== "undefined" && username !== user.username) {
-      const usernameExists = await User.findOne({ username, isDeleted: { $ne: true } });
+      const usernameExists = await User.findOne({
+        username,
+        isDeleted: { $ne: true },
+      });
       if (usernameExists) {
         return res.status(409).json({ message: "Username already exists" });
       }
@@ -231,8 +264,24 @@ router.post("/update", async (req, res) => {
       user.username = username;
     if (typeof avatar_index !== "undefined") user.avatar_index = avatar_index;
     if (typeof frame_index !== "undefined") user.frame_index = frame_index;
+    if (typeof coinValue !== "undefined") {
+      user.coinValue = Math.max(0, coinValue); // prevent negative
+    }
 
-    await user.save(); // no { new: true } needed
+    if (typeof hintValue !== "undefined") {
+      user.hintValue = Math.max(0, hintValue);
+    }
+
+    // 📅 Date fields (string based as per your schema)
+    if (typeof lastDailyQuestDate !== "undefined") {
+      user.lastDailyQuestDate = lastDailyQuestDate;
+    }
+
+    if (typeof lastNewEventDate !== "undefined") {
+      user.lastNewEventDate = lastNewEventDate;
+    }
+
+    await user.save({new:true}); // no { new: true } needed
 
     res.json({
       message: "Profile Update",
@@ -241,6 +290,10 @@ router.post("/update", async (req, res) => {
       avatar_index: user.avatar_index,
       playerId: user.playerId,
       email: user.email,
+      coinValue: user.coinValue,
+      hintValue: user.hintValue,
+      lastDailyQuestDate: user.lastDailyQuestDate,
+      lastNewEventDate: user.lastNewEventDate,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -288,6 +341,10 @@ router.get("/get-user-data", async (req, res) => {
       frame_index: 1,
       playerId: 1,
       levels: 1,
+      coinValue: 1,
+      hintValue: 1,
+      lastDailyQuestDate: 1,
+      lastNewEventDate: 1,
     };
 
     // Build query dynamically
@@ -296,7 +353,6 @@ router.get("/get-user-data", async (req, res) => {
     if (playerId) query.playerId = playerId;
 
     const user = await User.findOne(query).select(projection).lean();
-
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -326,6 +382,11 @@ router.get("/get-user-data", async (req, res) => {
       avatar_index: user.avatar_index,
       frame_index: user.frame_index,
       playerId: user.playerId,
+
+      coinValue: user.coinValue,
+      hintValue: user.hintValue,
+      lastDailyQuestDate: user.lastDailyQuestDate,
+      lastNewEventDate: user.lastNewEventDate,
       levels: formattedLevels,
     };
 
@@ -803,7 +864,10 @@ router.post("/bulk-level-complete", async (req, res) => {
     const playerIds = records.map((r) => r.playerId);
 
     // 1️⃣ Fetch all users in ONE query
-    const users = await User.find({ playerId: { $in: playerIds }, isDeleted: { $ne: true } });
+    const users = await User.find({
+      playerId: { $in: playerIds },
+      isDeleted: { $ne: true },
+    });
     const userMap = new Map(users.map((u) => [u.playerId, u]));
 
     const userOps = [];
@@ -1250,7 +1314,10 @@ router.get("/rankUpdate", async (req, res) => {
     const MULTIPLIER = 2;
 
     // 1️⃣ Fetch users (only what we need)
-    const users = await User.find({ isDeleted: { $ne: true } }, { levels: 1 }).lean();
+    const users = await User.find(
+      { isDeleted: { $ne: true } },
+      { levels: 1 },
+    ).lean();
 
     let modifiedCount = 0;
 
@@ -1454,10 +1521,10 @@ router.post("/admin/import-db", async (req, res) => {
     await Promise.all([
       users.length && User.insertMany(users, { ordered: false }),
       leagueprogresses.length &&
-      LeagueProgress.insertMany(leagueprogresses, { ordered: false }),
+        LeagueProgress.insertMany(leagueprogresses, { ordered: false }),
       levels.length && Level.insertMany(levels, { ordered: false }),
       transactions.length &&
-      transaction.insertMany(transactions, { ordered: false }),
+        transaction.insertMany(transactions, { ordered: false }),
     ]);
 
     // 5️⃣ Verify counts
@@ -1489,7 +1556,7 @@ router.post("/ReplaceAllLevelData", async (req, res) => {
 
     if (!playerId || !levelsData) {
       return res.status(400).json({
-        message: "playerId and levelsData are required"
+        message: "playerId and levelsData are required",
       });
     }
 
@@ -1497,7 +1564,7 @@ router.post("/ReplaceAllLevelData", async (req, res) => {
 
     if (!user) {
       return res.status(404).json({
-        message: "User not found"
+        message: "User not found",
       });
     }
 
@@ -1513,7 +1580,7 @@ router.post("/ReplaceAllLevelData", async (req, res) => {
       WeeklychallengeLevels: "weeklychallenge",
       ThetowerLevels: "thetower",
       TimerushLevels: "timerush",
-      TwistermodeLevels: "twistermode"
+      TwistermodeLevels: "twistermode",
     };
 
     // ============================
@@ -1524,7 +1591,8 @@ router.post("/ReplaceAllLevelData", async (req, res) => {
       if (!modeKey) continue;
 
       const incomingLevels = levelsData[key];
-      if (!Array.isArray(incomingLevels) || incomingLevels.length === 0) continue;
+      if (!Array.isArray(incomingLevels) || incomingLevels.length === 0)
+        continue;
 
       const levelDoc = user.levels[modeKey];
 
@@ -1535,10 +1603,8 @@ router.post("/ReplaceAllLevelData", async (req, res) => {
 
       // 🔥 MERGE / REPLACE LOGIC
       for (const { levelNumber, levelTime } of incomingLevels) {
-        if (
-          typeof levelNumber !== "number" ||
-          typeof levelTime !== "number"
-        ) continue;
+        if (typeof levelNumber !== "number" || typeof levelTime !== "number")
+          continue;
 
         // ✅ replace or add
         levelDoc.level_times.set(String(levelNumber), levelTime);
@@ -1567,13 +1633,12 @@ router.post("/ReplaceAllLevelData", async (req, res) => {
     await user.save();
 
     return res.status(200).json({
-      message: "success"
+      message: "success",
     });
-
   } catch (err) {
     return res.status(500).json({
       message: "Server error",
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -1587,7 +1652,7 @@ router.delete("/delete-account", async (req, res) => {
     // ✅ validation
     if (!playerId && !email) {
       return res.status(400).json({
-        message: "Provide playerId or email"
+        message: "Provide playerId or email",
       });
     }
 
@@ -1615,43 +1680,50 @@ router.delete("/delete-account", async (req, res) => {
 
       // using findOneAndUpdate to trigger pre-hook, or just updateOne
       // By default Mongoose 9 does trigger update hooks.
-      const scheduledUser = await User.findOneAndUpdate(query, {
-        $set: { deleteScheduledAt }
-      }, { new: true }).lean();
+      const scheduledUser = await User.findOneAndUpdate(
+        query,
+        {
+          $set: { deleteScheduledAt },
+        },
+        { new: true },
+      ).lean();
 
       if (!scheduledUser) {
         return res.status(404).json({
-          message: "User not found or already deleted"
+          message: "User not found or already deleted",
         });
       }
 
       return res.status(200).json({
-        message: `Account deletion scheduled in ${numDays} days`
+        message: `Account deletion scheduled in ${numDays} days`,
       });
     } else {
       // instant soft delete
-      const deletedUser = await User.findOneAndUpdate(query, {
-        $set: {
-          isDeleted: true,
-          deleteScheduledAt: new Date()
-        }
-      }, { new: true }).lean();
+      const deletedUser = await User.findOneAndUpdate(
+        query,
+        {
+          $set: {
+            isDeleted: true,
+            deleteScheduledAt: new Date(),
+          },
+        },
+        { new: true },
+      ).lean();
 
       if (!deletedUser) {
         return res.status(404).json({
-          message: "User not found or already deleted"
+          message: "User not found or already deleted",
         });
       }
 
       return res.status(200).json({
-        message: "Account deleted successfully"
+        message: "Account deleted successfully",
       });
     }
-
   } catch (err) {
     return res.status(500).json({
       message: "Server error",
-      error: err.message
+      error: err.message,
     });
   }
 });
@@ -1663,15 +1735,18 @@ router.get("/cleanup-deleted", async (req, res) => {
     // Find all users scheduled for deletion where the time has passed
     // explicitly check `isDeleted: { $ne: true }` so it bypasses hook appropriately
     // Actually the hook automatically adds `isDeleted: { $ne: true }` if missing.
-    const result = await User.updateMany({
-      deleteScheduledAt: { $lte: new Date() }
-    }, {
-      $set: { isDeleted: true }
-    });
+    const result = await User.updateMany(
+      {
+        deleteScheduledAt: { $lte: new Date() },
+      },
+      {
+        $set: { isDeleted: true },
+      },
+    );
 
     return res.status(200).json({
       message: "Cleanup completed",
-      modifiedCount: result.modifiedCount
+      modifiedCount: result.modifiedCount,
     });
   } catch (err) {
     console.error("Cleanup error:", err);
