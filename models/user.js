@@ -51,6 +51,27 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+     coinValue: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    hintValue: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    // 📅 Activity Tracking
+    lastDailyQuestDate: {
+      type: String,
+      default: null,
+    },
+    lastNewEventDate: {
+      type: String,
+      default: null,
+    },
+
   },
   {
     timestamps: true, // ✅ THIS ADDS createdAt & updatedAt
