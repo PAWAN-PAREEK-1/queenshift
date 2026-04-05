@@ -113,6 +113,7 @@ router.post("/signup", async (req, res) => {
 
       if (emailUser) {
         const levels = formatPlayedLevels(emailUser.levels);
+        console.log(emailUser.avatarData.length, emailUser.avatarData);
 
         return res.status(200).json({
           message: "User already exists with this email",
@@ -127,7 +128,10 @@ router.post("/signup", async (req, res) => {
             hintValue: emailUser.hintValue ?? 0,
             lastDailyQuestDate: emailUser.lastDailyQuestDate ?? null,
             lastNewEventDate: emailUser.lastNewEventDate ?? null,
-            avatarData: emailUser.avatarData ?? defaultAvatarData,
+            avatarData:
+              emailUser.avatarData.length == 0
+                ? defaultAvatarData
+                : emailUser.avatarData,
           },
         });
       }
@@ -164,7 +168,10 @@ router.post("/signup", async (req, res) => {
           hintValue: existingUser.hintValue ?? 0,
           lastDailyQuestDate: existingUser.lastDailyQuestDate ?? null,
           lastNewEventDate: existingUser.lastNewEventDate ?? null,
-          avatarData: existingUser.avatarData ?? defaultAvatarData,
+          avatarData:
+            existingUser.avatarData.length == 0
+              ? defaultAvatarData
+              : existingUser.avatarData,
         },
       });
     }
@@ -180,7 +187,7 @@ router.post("/signup", async (req, res) => {
 
       if (existingEmail) {
         const levels = formatPlayedLevels(existingEmail.levels);
-
+        console.log(existingEmail.avatarData.length, existingEmail.avatarData);
         return res.status(200).json({
           message: "User already exists with this email",
           user: {
@@ -195,7 +202,10 @@ router.post("/signup", async (req, res) => {
             hintValue: existingEmail.hintValue ?? 0,
             lastDailyQuestDate: existingEmail.lastDailyQuestDate ?? null,
             lastNewEventDate: existingEmail.lastNewEventDate ?? null,
-            avatarData: existingEmail.avatarData ?? defaultAvatarData,
+            avatarData:
+              existingEmail.avatarData.length == 0
+                ? defaultAvatarData
+                : existingEmail.avatarData,
           },
         });
       }
@@ -233,7 +243,8 @@ router.post("/signup", async (req, res) => {
           hintValue: user.hintValue ?? 0,
           lastDailyQuestDate: user.lastDailyQuestDate ?? null,
           lastNewEventDate: user.lastNewEventDate ?? null,
-          avatarData: user.avatarData ?? defaultAvatarData,
+          avatarData:
+            user.avatarData.length == 0 ? defaultAvatarData : user.avatarData,
         },
       });
     }
