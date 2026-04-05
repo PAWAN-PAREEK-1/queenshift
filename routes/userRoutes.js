@@ -408,11 +408,11 @@ router.get("/get-user-data", async (req, res) => {
       avatar_index: user.avatar_index,
       frame_index: user.frame_index,
       playerId: user.playerId,
-      avatarData: user.avatarData,
-      coinValue: user.coinValue,
-      hintValue: user.hintValue,
-      lastDailyQuestDate: user.lastDailyQuestDate,
-      lastNewEventDate: user.lastNewEventDate,
+      avatarData: user.avatarData ?? [],
+      coinValue: user.coinValue ?? 0,
+      hintValue: user.hintValue ?? 0,
+      lastDailyQuestDate: user.lastDailyQuestDate ?? null,
+      lastNewEventDate: user.lastNewEventDate ?? null,
       levels: formattedLevels,
     };
 
