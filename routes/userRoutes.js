@@ -1580,7 +1580,8 @@ router.post("/ReplaceAllLevelData", async (req, res) => {
     await connectDB();
 
     const { playerId, levelsData } = req.body;
-
+    console.log({playerId, levelsData});
+    
     if (!playerId || !levelsData) {
       return res.status(400).json({
         message: "playerId and levelsData are required",
@@ -1663,6 +1664,7 @@ router.post("/ReplaceAllLevelData", async (req, res) => {
       message: "success",
     });
   } catch (err) {
+    console.log(err)
     return res.status(500).json({
       message: "Server error",
       error: err.message,
