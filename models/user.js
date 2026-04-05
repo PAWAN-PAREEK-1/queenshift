@@ -51,7 +51,7 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-     coinValue: {
+    coinValue: {
       type: Number,
       default: 0,
       min: 0,
@@ -71,7 +71,16 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-
+    avatarData: {
+      type: [
+        {
+          name: String,
+          isOpen: Boolean,
+        _id:false
+        },
+      ],
+      default: [],
+    },
   },
   {
     timestamps: true, // ✅ THIS ADDS createdAt & updatedAt
@@ -86,15 +95,15 @@ const excludeDeleted = function () {
   }
 };
 
-userSchema.pre('find', excludeDeleted);
-userSchema.pre('findOne', excludeDeleted);
-userSchema.pre('findOneAndUpdate', excludeDeleted);
-userSchema.pre('countDocuments', excludeDeleted);
-userSchema.pre('updateOne', excludeDeleted);
-userSchema.pre('updateMany', excludeDeleted);
-userSchema.pre('exists', excludeDeleted);
+userSchema.pre("find", excludeDeleted);
+userSchema.pre("findOne", excludeDeleted);
+userSchema.pre("findOneAndUpdate", excludeDeleted);
+userSchema.pre("countDocuments", excludeDeleted);
+userSchema.pre("updateOne", excludeDeleted);
+userSchema.pre("updateMany", excludeDeleted);
+userSchema.pre("exists", excludeDeleted);
 
-userSchema.pre('aggregate', function () {
+userSchema.pre("aggregate", function () {
   const pipeline = this.pipeline();
 
   if (pipeline.length === 0) {

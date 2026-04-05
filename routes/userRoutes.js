@@ -234,6 +234,7 @@ router.post("/update", async (req, res) => {
       hintValue,
       lastDailyQuestDate,
       lastNewEventDate,
+      avatarData,
     } = req.body;
     const userId = playerId;
     if (!userId) {
@@ -280,8 +281,11 @@ router.post("/update", async (req, res) => {
     if (typeof lastNewEventDate !== "undefined") {
       user.lastNewEventDate = lastNewEventDate;
     }
+    if (Array.isArray(avatarData)) {
+      user.avatarData = avatarData;
+    }
 
-    await user.save({new:true}); // no { new: true } needed
+    await user.save({ new: true }); // no { new: true } needed
 
     res.json({
       message: "Profile Update",
@@ -294,6 +298,7 @@ router.post("/update", async (req, res) => {
       hintValue: user.hintValue,
       lastDailyQuestDate: user.lastDailyQuestDate,
       lastNewEventDate: user.lastNewEventDate,
+      avatarData: user.avatarData,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -345,6 +350,7 @@ router.get("/get-user-data", async (req, res) => {
       hintValue: 1,
       lastDailyQuestDate: 1,
       lastNewEventDate: 1,
+      avatarData: 1,
     };
 
     // Build query dynamically
@@ -382,7 +388,7 @@ router.get("/get-user-data", async (req, res) => {
       avatar_index: user.avatar_index,
       frame_index: user.frame_index,
       playerId: user.playerId,
-
+      avatarData: user.avatarData,
       coinValue: user.coinValue,
       hintValue: user.hintValue,
       lastDailyQuestDate: user.lastDailyQuestDate,
