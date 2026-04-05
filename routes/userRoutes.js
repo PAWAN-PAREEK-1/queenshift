@@ -1670,83 +1670,135 @@ router.post("/ReplaceAllLevelData", async (req, res) => {
   }
 });
 
+// router.delete("/delete-account", async (req, res) => {
+//   try {
+//     await connectDB();
+
+//     const { playerId, email, days } = req.body;
+
+//     // ✅ validation
+//     if (!playerId && !email) {
+//       return res.status(400).json({
+//         message: "Provide playerId or email",
+//       });
+//     }
+
+//     // ============================
+//     // BUILD QUERY DYNAMICALLY
+//     // ============================
+//     let query = { isDeleted: { $ne: true } };
+
+//     if (playerId && email) {
+//       // 🔒 safest → both must match
+//       query.playerId = playerId;
+//       query.email = email;
+//     } else if (playerId) {
+//       query.playerId = playerId;
+//     } else if (email) {
+//       query.email = email;
+//     }
+
+//     const numDays = Number(days);
+
+//     if (!isNaN(numDays) && numDays > 0) {
+//       // schedule delete
+//       const deleteScheduledAt = new Date();
+//       deleteScheduledAt.setDate(deleteScheduledAt.getDate() + numDays);
+
+//       // using findOneAndUpdate to trigger pre-hook, or just updateOne
+//       // By default Mongoose 9 does trigger update hooks.
+//       const scheduledUser = await User.findOneAndUpdate(
+//         query,
+//         {
+//           $set: { deleteScheduledAt },
+//         },
+//         { new: true },
+//       ).lean();
+
+//       if (!scheduledUser) {
+//         return res.status(404).json({
+//           message: "User not found or already deleted",
+//         });
+//       }
+
+//       return res.status(200).json({
+//         message: `Account deletion scheduled in ${numDays} days`,
+//       });
+//     } else {
+//       // instant soft delete
+//       const deletedUser = await User.findOneAndUpdate(
+//         query,
+//         {
+//           $set: {
+//             isDeleted: true,
+//             deleteScheduledAt: new Date(),
+//           },
+//         },
+//         { new: true },
+//       ).lean();
+
+//       if (!deletedUser) {
+//         return res.status(404).json({
+//           message: "User not found or already deleted",
+//         });
+//       }
+
+//       return res.status(200).json({
+//         message: "Account deleted successfully",
+//       });
+//     }
+//   } catch (err) {
+//     return res.status(500).json({
+//       message: "Server error",
+//       error: err.message,
+//     });
+//   }
+// });
+
+
 router.delete("/delete-account", async (req, res) => {
   try {
     await connectDB();
 
-    const { playerId, email, days } = req.body;
+    const { playerId, email } = req.body;
 
     // ✅ validation
     if (!playerId && !email) {
       return res.status(400).json({
-        message: "Provide playerId or email",
+        message: "playerId or email is required",
       });
     }
 
     // ============================
-    // BUILD QUERY DYNAMICALLY
+    // BUILD QUERY
     // ============================
-    let query = { isDeleted: { $ne: true } };
+    const query = {};
 
     if (playerId && email) {
-      // 🔒 safest → both must match
+      // safest → both must match
       query.playerId = playerId;
       query.email = email;
     } else if (playerId) {
       query.playerId = playerId;
-    } else if (email) {
+    } else {
       query.email = email;
     }
 
-    const numDays = Number(days);
+    // ============================
+    // DELETE USER (HARD DELETE)
+    // ============================
+    const deletedUser = await User.findOneAndDelete(query).lean();
 
-    if (!isNaN(numDays) && numDays > 0) {
-      // schedule delete
-      const deleteScheduledAt = new Date();
-      deleteScheduledAt.setDate(deleteScheduledAt.getDate() + numDays);
-
-      // using findOneAndUpdate to trigger pre-hook, or just updateOne
-      // By default Mongoose 9 does trigger update hooks.
-      const scheduledUser = await User.findOneAndUpdate(
-        query,
-        {
-          $set: { deleteScheduledAt },
-        },
-        { new: true },
-      ).lean();
-
-      if (!scheduledUser) {
-        return res.status(404).json({
-          message: "User not found or already deleted",
-        });
-      }
-
-      return res.status(200).json({
-        message: `Account deletion scheduled in ${numDays} days`,
-      });
-    } else {
-      // instant soft delete
-      const deletedUser = await User.findOneAndUpdate(
-        query,
-        {
-          $set: {
-            isDeleted: true,
-            deleteScheduledAt: new Date(),
-          },
-        },
-        { new: true },
-      ).lean();
-
-      if (!deletedUser) {
-        return res.status(404).json({
-          message: "User not found or already deleted",
-        });
-      }
-
-      return res.status(200).json({
-        message: "Account deleted successfully",
+    if (!deletedUser) {
+      return res.status(404).json({
+        message: "User not found",
       });
     }
+
+    return res.status(200).json({
+      message: "Account deleted permanently",
+    });
+
   } catch (err) {
     return res.status(500).json({
       message: "Server error",
