@@ -102,6 +102,11 @@ router.post("/signup", async (req, res) => {
             frame_index: emailUser.frame_index,
             playerId: emailUser.playerId,
             ...(levels && { levels }),
+            coinValue: emailUser.coinValue,
+            hintValue: emailUser.hintValue,
+            lastDailyQuestDate: emailUser.lastDailyQuestDate,
+            lastNewEventDate: emailUser.lastNewEventDate,
+            avatarData: emailUser.avatarData,
           },
         });
       }
@@ -134,6 +139,11 @@ router.post("/signup", async (req, res) => {
           frame_index: existingUser.frame_index,
           playerId: existingUser.playerId,
           ...(levels && { levels }),
+          coinValue: existingUser.coinValue,
+          hintValue: existingUser.hintValue,
+          lastDailyQuestDate: existingUser.lastDailyQuestDate,
+          lastNewEventDate: existingUser.lastNewEventDate,
+          avatarData: existingUser.avatarData,
         },
       });
     }
@@ -160,6 +170,11 @@ router.post("/signup", async (req, res) => {
             playerId: existingEmail.playerId,
             ...(levels && { levels }),
             deleteScheduledAt: existingEmail.deleteScheduledAt,
+            coinValue: existingEmail.coinValue,
+            hintValue: existingEmail.hintValue,
+            lastDailyQuestDate: existingEmail.lastDailyQuestDate,
+            lastNewEventDate: existingEmail.lastNewEventDate,
+            avatarData: existingEmail.avatarData,
           },
         });
       }
@@ -193,6 +208,11 @@ router.post("/signup", async (req, res) => {
           avatar_index: user.avatar_index,
           frame_index: user.frame_index,
           playerId: user.playerId,
+          coinValue: user.coinValue,
+          hintValue: user.hintValue,
+          lastDailyQuestDate: user.lastDailyQuestDate,
+          lastNewEventDate: user.lastNewEventDate,
+          avatarData: user.avatarData,
         },
       });
     }
