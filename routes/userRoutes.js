@@ -335,7 +335,8 @@ router.get("/time", async (req, res) => {
   return res.status(200).json({
     data: {
       date,
-      nextRunAtUtc: nextRunAt.getTime(), // ✅ UTC
+      // nextRunAtUtc: nextRunAt.getTime(), // ✅ UTC
+      nextRunAtUtc: 1777507200000, // ✅ UTC
       // remainingMs, // ✅ absolute UTC diff
       // remaining: {
       //   days: Math.floor(remainingMs / (1000 * 60 * 60 * 24)),

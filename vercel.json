@@ -15,7 +15,7 @@
   "crons": [
     {
       "path": "/api/league/reset",
-      "schedule": "0 0 1 */4 *"
+       "schedule": "0 0 29 5 *"
     },
     {
       "path": "/api/user/cleanup-deleted",
