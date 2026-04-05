@@ -11,6 +11,27 @@ import fs from "fs";
 import path from "path";
 const router = express.Router();
 
+const defaultAvatarData = [
+  { name: "Avatar_0", isOpen: true },
+  { name: "Avatar_1", isOpen: true },
+  { name: "Avatar_2", isOpen: true },
+  { name: "Avatar_3", isOpen: true },
+  { name: "Avatar_4", isOpen: true },
+  { name: "Avatar_5", isOpen: true },
+  { name: "Avatar_6", isOpen: true },
+  { name: "Avatar_7", isOpen: true },
+  { name: "Avatar_8", isOpen: true },
+  { name: "Avatar_9", isOpen: true },
+  { name: "Avatar_10", isOpen: true },
+  { name: "Avatar_11", isOpen: true },
+  { name: "Avatar_12", isOpen: false },
+  { name: "Avatar_13", isOpen: true },
+  { name: "Avatar_14", isOpen: false },
+  { name: "Avatar_15", isOpen: false },
+  { name: "Avatar_16", isOpen: false },
+  { name: "Avatar_17", isOpen: false },
+];
+
 export function calculateLeague(score) {
   const match = LEAGUES.find((l) => score >= l.min && score <= l.max);
   return match || { name: "bronze", level: 3 };
@@ -106,7 +127,7 @@ router.post("/signup", async (req, res) => {
             hintValue: emailUser.hintValue ?? 0,
             lastDailyQuestDate: emailUser.lastDailyQuestDate ?? null,
             lastNewEventDate: emailUser.lastNewEventDate ?? null,
-            avatarData: emailUser.avatarData ?? [],
+            avatarData: emailUser.avatarData ?? defaultAvatarData,
           },
         });
       }
@@ -143,7 +164,7 @@ router.post("/signup", async (req, res) => {
           hintValue: existingUser.hintValue ?? 0,
           lastDailyQuestDate: existingUser.lastDailyQuestDate ?? null,
           lastNewEventDate: existingUser.lastNewEventDate ?? null,
-          avatarData: existingUser.avatarData ?? [],
+          avatarData: existingUser.avatarData ?? defaultAvatarData,
         },
       });
     }
@@ -174,7 +195,7 @@ router.post("/signup", async (req, res) => {
             hintValue: existingEmail.hintValue ?? 0,
             lastDailyQuestDate: existingEmail.lastDailyQuestDate ?? null,
             lastNewEventDate: existingEmail.lastNewEventDate ?? null,
-            avatarData: existingEmail.avatarData ?? [],
+            avatarData: existingEmail.avatarData ?? defaultAvatarData,
           },
         });
       }
@@ -212,7 +233,7 @@ router.post("/signup", async (req, res) => {
           hintValue: user.hintValue ?? 0,
           lastDailyQuestDate: user.lastDailyQuestDate ?? null,
           lastNewEventDate: user.lastNewEventDate ?? null,
-          avatarData: user.avatarData ?? [],
+          avatarData: user.avatarData ?? defaultAvatarData,
         },
       });
     }
@@ -1580,8 +1601,8 @@ router.post("/ReplaceAllLevelData", async (req, res) => {
     await connectDB();
 
     const { playerId, levelsData } = req.body;
-    console.log({playerId, levelsData});
-    
+    console.log({ playerId, levelsData });
+
     if (!playerId || !levelsData) {
       return res.status(400).json({
         message: "playerId and levelsData are required",
@@ -1664,7 +1685,7 @@ router.post("/ReplaceAllLevelData", async (req, res) => {
       message: "success",
     });
   } catch (err) {
-    console.log(err)
+    console.log(err);
     return res.status(500).json({
       message: "Server error",
       error: err.message,
@@ -1757,7 +1778,6 @@ router.post("/ReplaceAllLevelData", async (req, res) => {
 //   }
 // });
 
-
 router.delete("/delete-account", async (req, res) => {
   try {
     await connectDB();
@@ -1800,7 +1820,6 @@ router.delete("/delete-account", async (req, res) => {
     return res.status(200).json({
       message: "Account deleted permanently",
     });
-
   } catch (err) {
     return res.status(500).json({
       message: "Server error",
